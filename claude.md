@@ -63,3 +63,71 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+---
+
+## Project: 메이플 플래닛 유틸리티 플랫폼
+
+### 개요
+메이플 플래닛(사설 서버) 유저를 위한 스펙업 유틸리티 사이트.
+비로그인 기반. 주요 기능: 주스탯 환산기, 강화 시뮬레이터(혼돈의 주문서 / 큐브 / 메이커).
+
+### 기술 스택
+- **언어/프레임워크:** Java 21, Spring Boot 3.5.x
+- **ORM:** Spring Data JPA (Hibernate)
+- **DB:** MySQL (운영) / H2 (로컬 개발)
+- **캐시:** Spring Cache + Caffeine (확률 테이블 캐싱)
+- **API 문서:** SpringDoc OpenAPI (Swagger UI `/swagger-ui/index.html`)
+- **빌드:** Gradle (Groovy DSL)
+- **기본 패키지:** `io.github.jaemo_lim.mapleplanet_spring`
+
+### 패키지 구조
+```
+src/main/java/io/github/jaemo_lim/mapleplanet_spring/
+├── domain/          # 도메인별 패키지 (entity, repository, service, controller)
+│   ├── job/
+│   ├── item/
+│   ├── calculator/  # 주스탯 환산기
+│   ├── simulator/   # 강화 시뮬레이터 (scroll, cube, maker)
+│   └── simulation/  # 시뮬레이션 결과 저장/공유
+├── global/          # 공통 (exception, response, config)
+└── MaplePlanetSpringApplication.java
+```
+
+### 핵심 계산 공식
+```
+# 최종 주스탯
+최종 주스탯 = (직접 찍은 주스탯 + Σ깡주스탯) × (1 + Σ주스탯% / 100)
+
+# 스공
+스공 = (주스탯 × 무기상수 + 부스탯) × 총공격력 / 100
+
+# 아이템 교체 효율%
+효율% = (착용후 최종 주스탯 - 미착용 최종 주스탯) / 직접 찍은 주스탯 × 100
+
+# 부스탯 → 주스탯 환산
+부스탯 1 = 1 / 무기상수 주스탯
+
+# 공격력 → 주스탯 환산
+공격력 1 = (주스탯 × 무기상수 + 부스탯) / (무기상수 × 총공격력) 주스탯
+```
+
+### 직업별 스탯
+| 직업 | 주스탯 | 부스탯 | 공격 |
+|------|--------|--------|------|
+| 전사 | STR | DEX | ATK |
+| 도적 | LUK | STR | ATK |
+| 궁수 | DEX | STR | ATK |
+| 해적 | STR | DEX | ATK |
+| 마법사 | INT | LUK | MATK |
+
+### 비로그인 사용자 처리
+- 브라우저 최초 방문 시 프론트에서 UUID 생성 → `localStorage`에 저장 (`session_key`)
+- 시뮬레이션 결과 공유 시 별도 `share_key` (UUID) 발급 → `/share/{share_key}`
+
+### 빌드 / 실행
+```bash
+./gradlew build          # 빌드
+./gradlew bootRun        # 로컬 실행 (H2)
+./gradlew test           # 테스트
+```
