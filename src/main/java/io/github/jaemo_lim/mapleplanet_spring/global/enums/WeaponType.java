@@ -7,12 +7,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum WeaponType {
 
-    ONE_HAND_SWORD("한손검", 4.0),
-    ONE_HAND_AXE("한손도끼", 4.4),
-    ONE_HAND_BLUNT("한손둔기", 4.4),
-    TWO_HAND_SWORD("두손검", 4.6),
-    TWO_HAND_AXE("두손도끼", 4.8),
-    TWO_HAND_BLUNT("두손둔기", 4.8),
+    ONE_HAND_SWORD("한손검", 1.20),
+    ONE_HAND_AXE("한손도끼", 1.20),
+    ONE_HAND_BLUNT("한손둔기", 1.20),
+    TWO_HAND_SWORD("두손검", 1.34),
+    TWO_HAND_AXE("두손도끼", 1.34),
+    TWO_HAND_BLUNT("두손둔기", 1.34),
     SPEAR("창", 5.0),
     POLEARM("폴암", 5.0),
     BOW("활", 3.4),
