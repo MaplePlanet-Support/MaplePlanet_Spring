@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [v0.4] - 2026-05-16
+### Added
+- `WeaponType` enum — 전체 무기상수 테이블 (인게임 실측 검증 완료)
+- `POST /api/v1/calculator/damage` — 스공 계산 API (weaponType으로 상수 자동 적용)
+- `DamageCalcRequest/Response` DTO
+- `DamageCalcService` — 정축/여축 레벨 → 공격력 반영, 스공 계산
+
+---
+
+## [v0.3] - 2026-05-16
+### Added
+- `POST /api/v1/calculator/stat-compare` — 아이템 주스탯 비교 API
+- `StatCompareRequest`, `StatCompareResponse`, `ItemStatDto` DTO
+- `StatCompareService` — `(baseStat + 깡스탯합) × (1 + 스탯%합 / 100)` 공식 적용
+
+---
+
 ## [v0.2] - 2026-05-16
 ### Added
 - `UserProfile` entity — 비로그인 익명 프로필 (identifier, pinHash)
