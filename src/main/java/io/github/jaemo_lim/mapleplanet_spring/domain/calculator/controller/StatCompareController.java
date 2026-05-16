@@ -1,9 +1,7 @@
 package io.github.jaemo_lim.mapleplanet_spring.domain.calculator.controller;
 
-import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.DamageCalcRequest;
-import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.DamageCalcResponse;
-import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.StatCompareRequest;
-import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.StatCompareResponse;
+import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.*;
+
 import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.service.DamageCalcService;
 import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.service.StatCompareService;
 import jakarta.validation.Valid;
@@ -30,5 +28,10 @@ public class StatCompareController {
     @PostMapping("/damage")
     public ResponseEntity<DamageCalcResponse> damage(@RequestBody @Valid DamageCalcRequest request) {
         return ResponseEntity.ok(damageCalcService.calculate(request));
+    }
+
+    @PostMapping("/damage-compare")
+    public ResponseEntity<DamageCompareResponse> damageCompare(@RequestBody @Valid DamageCompareRequest request) {
+        return ResponseEntity.ok(damageCalcService.compare(request));
     }
 }
