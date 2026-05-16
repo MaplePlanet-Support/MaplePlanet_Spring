@@ -1,27 +1,28 @@
-package io.github.jaemo_lim.mapleplanet_spring.domain.simulation.entity;
+package io.github.jaemo_lim.mapleplanet_spring.domain.calculator.entity;
 
-import io.github.jaemo_lim.mapleplanet_spring.domain.job.entity.Job;
-import io.github.jaemo_lim.mapleplanet_spring.global.enums.SimulationType;
+import io.github.jaemo_lim.mapleplanet_spring.domain.character.entity.Character;
+import io.github.jaemo_lim.mapleplanet_spring.global.enums.CalculationType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "simulation_result")
+@Table(name = "calculation_result")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class SimulationResult {
+public class CalculationResult {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 브라우저 UUID (localStorage 저장, 비로그인 사용자 식별)
-    @Column(nullable = false, length = 36)
-    private String sessionKey;
+    // 프로필 없이 계산만 할 경우 null
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "character_id")
+    private Character character;
 
     // 공유 링크용 UUID (/share/{shareKey})
     @Column(nullable = false, unique = true, length = 36)
@@ -29,14 +30,9 @@ public class SimulationResult {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SimulationType simulationType;
+    private CalculationType calculationType;
 
-    // 환산기 사용 시 직업 정보 (시뮬레이터만 사용 시 null)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = true)
-    private Job job;
-
-    // 당시 입력값 스냅샷 (확률 테이블 변경 후에도 결과 보존)
+    // 확률 테이블 변경 후에도 당시 입력값 보존
     @Column(nullable = false, columnDefinition = "TEXT")
     private String inputSnapshot;
 
@@ -47,7 +43,7 @@ public class SimulationResult {
     private LocalDateTime createdAt;
 
     @PrePersist
-    protected void onCreate() {
+    private void prePersist() {
         this.createdAt = LocalDateTime.now();
     }
 }
