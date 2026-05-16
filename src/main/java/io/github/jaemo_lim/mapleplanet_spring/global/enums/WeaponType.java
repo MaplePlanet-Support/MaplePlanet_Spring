@@ -20,8 +20,14 @@ public enum WeaponType {
     DAGGER("단검", 3.6),
     CLAW("아대", 3.8),
     KNUCKLE("너클", 4.8),
-    GUN("건", 3.6);
+    GUN("건", 3.6),
+    WAND("완드", 0.0),
+    STAFF("스태프", 0.0);
 
     private final String displayName;
     private final double constant;
+
+    public boolean isMagicWeapon() {
+        return this == WAND || this == STAFF;
+    }
 }

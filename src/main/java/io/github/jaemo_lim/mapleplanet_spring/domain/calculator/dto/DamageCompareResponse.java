@@ -11,7 +11,12 @@ public class DamageCompareResponse {
     private double statWithItemB;
     private double damageWithItemA;
     private double damageWithItemB;
+    private double magicWithItemA;
+    private double magicWithItemB;
+    private double expectedDmgWithItemA;
+    private double expectedDmgWithItemB;
     private double statDifference;   // B - A
     private double damageDifference; // B - A
+    private double expectedDmgDiffPct;
     private String betterItem;       // "A", "B", "SAME"
 }

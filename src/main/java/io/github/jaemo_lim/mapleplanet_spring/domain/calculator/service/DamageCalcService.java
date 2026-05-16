@@ -8,69 +8,260 @@ import java.util.List;
 @Service
 public class DamageCalcService {
 
-    private static final int BLESSING_ATK_PER_LEVEL = 1;
+    private static final int SPIRIT_BLESSING_MAX_LEVEL = 20;
+    private static final int EMPRESS_BLESSING_MAX_LEVEL = 12;
+    private static final int MAPLE_WARRIOR_MAX_LEVEL = 30;
+    private static final int MEDITATION_MAX_LEVEL = 20;
+    private static final int RAGE_MAX_LEVEL = 20;
+    private static final int SHARP_EYES_MAX_LEVEL = 30;
 
     public DamageCalcResponse calculate(DamageCalcRequest req) {
-        int blessingAtk = req.getBlessingLevel() * BLESSING_ATK_PER_LEVEL;
-        int empressBlessingAtk = req.getEmpressBlessingLevel() * BLESSING_ATK_PER_LEVEL;
+        BuffBonus buff = BuffBonus.from(req);
+        boolean magicWeapon = req.getWeaponType().isMagicWeapon();
+        double buffedMainStat = applyMapleWarrior(req.getMainStat(), buff.mapleWarriorPercent());
+        int totalAtk = 0;
+        int totalMagic = 0;
+        double damage;
 
-        int baseAtk = req.getWeaponAtk() + req.getEquipAtk() + blessingAtk + empressBlessingAtk;
-        int totalAtk = (int) Math.floor(baseAtk * (1 + req.getAtkPercent() / 100.0));
+        if (magicWeapon) {
+            totalMagic = calcTotalAttackValue(
+                    req.getWeaponAtk() + req.getEquipAtk() + buff.magic(),
+                    req.getAtkPercent()
+            );
+            damage = calcMagicDamage(buffedMainStat, totalMagic);
+        } else {
+            totalAtk = calcTotalAttackValue(
+                    req.getWeaponAtk() + req.getEquipAtk() + buff.attack(),
+                    req.getAtkPercent()
+            );
+            damage = calcPhysicalDamage(
+                    buffedMainStat,
+                    req.getSubStat(),
+                    req.getWeaponType().getConstant(),
+                    totalAtk
+            );
+        }
 
-        double damage = (req.getMainStat() * req.getWeaponType().getConstant() + req.getSubStat())
-                * totalAtk / 100.0;
-
-        return new DamageCalcResponse(blessingAtk, empressBlessingAtk, totalAtk, damage);
+        return new DamageCalcResponse(
+                buff.spiritAttack(),
+                buff.empressAttack(),
+                buff.attack(),
+                buff.magic(),
+                buffedMainStat,
+                buff.critRate(),
+                buff.critDmgPP(),
+                totalAtk,
+                totalMagic,
+                damage
+        );
     }
 
     public DamageCompareResponse compare(DamageCompareRequest req) {
-        int blessingAtk = (req.getBlessingLevel() + req.getEmpressBlessingLevel()) * BLESSING_ATK_PER_LEVEL;
+        BuffBonus buff = BuffBonus.from(req);
 
         int totalFlatStat = sum(req.getEquippedItems(), "flat");
+        int totalFlatSubStat = sum(req.getEquippedItems(), "subFlat");
         int totalStatPercent = sum(req.getEquippedItems(), "percent");
         int totalFlatAtk = sum(req.getEquippedItems(), "atk");
+        int totalAtkPercent = sum(req.getEquippedItems(), "atkPercent");
+        int totalCritRate = sum(req.getEquippedItems(), "critRate");
+        int totalDmgPercent = sum(req.getEquippedItems(), "totalDmg");
+        int totalBossDmgPercent = sum(req.getEquippedItems(), "bossDmg");
 
         if (req.getCurrentSlotItem() != null) {
             totalFlatStat -= req.getCurrentSlotItem().getFlatStat();
+            totalFlatSubStat -= req.getCurrentSlotItem().getFlatSubStat();
             totalStatPercent -= req.getCurrentSlotItem().getStatPercent();
             totalFlatAtk -= req.getCurrentSlotItem().getFlatAtk();
+            totalAtkPercent -= req.getCurrentSlotItem().getAtkPercent();
+            totalCritRate -= req.getCurrentSlotItem().getCritRateBonus();
+            totalDmgPercent -= req.getCurrentSlotItem().getTotalDmgPercent();
+            totalBossDmgPercent -= req.getCurrentSlotItem().getBossDmgPercent();
         }
 
-        double statA = calcStat(req.getBaseStat(), totalFlatStat, totalStatPercent, req.getItemA());
-        double statB = calcStat(req.getBaseStat(), totalFlatStat, totalStatPercent, req.getItemB());
+        double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, req.getItemA());
+        double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, req.getItemB());
 
-        double dmgA = calcDamage(statA, req.getSubStat(), req.getWeaponType().getConstant(),
-                req.getWeaponAtk(), totalFlatAtk, req.getAtkPercent(), blessingAtk, req.getItemA());
-        double dmgB = calcDamage(statB, req.getSubStat(), req.getWeaponType().getConstant(),
-                req.getWeaponAtk(), totalFlatAtk, req.getAtkPercent(), blessingAtk, req.getItemB());
+        DamageResult resultA = calcDamage(req, buff, statA, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+                totalCritRate, totalDmgPercent, totalBossDmgPercent, req.getItemA());
+        DamageResult resultB = calcDamage(req, buff, statB, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+                totalCritRate, totalDmgPercent, totalBossDmgPercent, req.getItemB());
 
-        double dmgDiff = dmgB - dmgA;
-        String better = dmgDiff > 0 ? "B" : dmgDiff < 0 ? "A" : "SAME";
+        double expectedDiffPct = resultA.expectedDamage() == 0
+                ? 0
+                : (resultB.expectedDamage() - resultA.expectedDamage()) / resultA.expectedDamage() * 100.0;
+        String better = expectedDiffPct > 0 ? "B" : expectedDiffPct < 0 ? "A" : "SAME";
 
-        return new DamageCompareResponse(statA, statB, dmgA, dmgB, statB - statA, dmgDiff, better);
+        return new DamageCompareResponse(
+                statA,
+                statB,
+                resultA.damage(),
+                resultB.damage(),
+                resultA.magic(),
+                resultB.magic(),
+                resultA.expectedDamage(),
+                resultB.expectedDamage(),
+                statB - statA,
+                resultB.damage() - resultA.damage(),
+                expectedDiffPct,
+                better
+        );
     }
 
-    private double calcStat(int baseStat, int totalFlat, int totalPercent, ItemStatFullDto item) {
-        return (baseStat + totalFlat + item.getFlatStat())
+    private double calcStat(int baseStat, int mapleWarriorPercent, int totalFlat, int totalPercent, ItemStatFullDto item) {
+        double directStat = applyMapleWarrior(baseStat, mapleWarriorPercent);
+        return (directStat + totalFlat + item.getFlatStat())
                 * (1 + (totalPercent + item.getStatPercent()) / 100.0);
     }
 
-    private double calcDamage(double mainStat, int subStat, double weaponConst,
-                              int weaponAtk, int totalFlatAtk, int atkPercent,
-                              int blessingAtk, ItemStatFullDto item) {
-        int totalAtk = (int) Math.floor(
-                (weaponAtk + totalFlatAtk + item.getFlatAtk() + blessingAtk) * (1 + atkPercent / 100.0)
-        );
+    private DamageResult calcDamage(DamageCompareRequest req, BuffBonus buff, double mainStat,
+                                    int totalFlatSubStat, int totalFlatAtk, int totalAtkPercent, int totalCritRate,
+                                    int totalDmgPercent, int totalBossDmgPercent, ItemStatFullDto item) {
+        boolean magicWeapon = req.getWeaponType().isMagicWeapon();
+        int attackPercent = req.getAtkPercent() + totalAtkPercent + item.getAtkPercent();
+        int subStat = req.getSubStat() + totalFlatSubStat + item.getFlatSubStat();
+        double damage;
+        double magic = 0;
+
+        if (magicWeapon) {
+            magic = calcTotalAttackValue(
+                    (int) Math.floor(req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.magic()),
+                    attackPercent
+            );
+            damage = calcMagicDamage(mainStat, magic);
+        } else {
+            int totalAtk = calcTotalAttackValue(
+                    req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.attack(),
+                    attackPercent
+            );
+            damage = calcPhysicalDamage(mainStat, subStat, req.getWeaponType().getConstant(), totalAtk);
+        }
+
+        int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
+        int critDmgPP = req.getCritDmgPP() + buff.critDmgPP();
+        int damagePercent = totalDmgPercent + totalBossDmgPercent + item.getTotalDmgPercent() + item.getBossDmgPercent();
+        double skillMultiplier = 1.0;
+        double damageMultiplier = 1 + damagePercent / 100.0;
+        double critMultiplier = 1 + (critRate / 100.0) * (critDmgPP / 100.0);
+
+        return new DamageResult(damage, magic, damage * skillMultiplier * damageMultiplier * critMultiplier);
+    }
+
+    private int calcTotalAttackValue(int baseAttack, int attackPercent) {
+        return (int) Math.floor(baseAttack * (1 + attackPercent / 100.0));
+    }
+
+    private double calcPhysicalDamage(double mainStat, int subStat, double weaponConst, int totalAtk) {
         return (mainStat * weaponConst + subStat) * totalAtk / 100.0;
+    }
+
+    private double calcMagicDamage(double mainStat, double totalMagic) {
+        return 0.0033665 * totalMagic * totalMagic + 3.3 * totalMagic + 0.5 * mainStat;
+    }
+
+    private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
+        return baseStat + Math.floor(baseStat * mapleWarriorPercent / 100.0);
     }
 
     private int sum(List<ItemStatFullDto> items, String type) {
         if (items == null) return 0;
         return switch (type) {
             case "flat" -> items.stream().mapToInt(ItemStatFullDto::getFlatStat).sum();
+            case "subFlat" -> items.stream().mapToInt(ItemStatFullDto::getFlatSubStat).sum();
             case "percent" -> items.stream().mapToInt(ItemStatFullDto::getStatPercent).sum();
             case "atk" -> items.stream().mapToInt(ItemStatFullDto::getFlatAtk).sum();
+            case "atkPercent" -> items.stream().mapToInt(ItemStatFullDto::getAtkPercent).sum();
+            case "critRate" -> items.stream().mapToInt(ItemStatFullDto::getCritRateBonus).sum();
+            case "totalDmg" -> items.stream().mapToInt(ItemStatFullDto::getTotalDmgPercent).sum();
+            case "bossDmg" -> items.stream().mapToInt(ItemStatFullDto::getBossDmgPercent).sum();
             default -> 0;
         };
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private record DamageResult(double damage, double magic, double expectedDamage) {
+    }
+
+    private record BuffBonus(
+            int spiritAttack,
+            int empressAttack,
+            int attack,
+            int magic,
+            int mapleWarriorPercent,
+            int critRate,
+            int critDmgPP
+    ) {
+        static BuffBonus from(DamageCalcRequest req) {
+            return from(
+                    req.getBlessingLevel(),
+                    req.getEmpressBlessingLevel(),
+                    req.getMapleWarriorLevel(),
+                    req.getMeditationLevel(),
+                    req.getRageLevel(),
+                    req.getSharpEyesLevel(),
+                    req.isDecentSharpEyes(),
+                    req.isBabyDragonFood()
+            );
+        }
+
+        static BuffBonus from(DamageCompareRequest req) {
+            return from(
+                    req.getBlessingLevel(),
+                    req.getEmpressBlessingLevel(),
+                    req.getMapleWarriorLevel(),
+                    req.getMeditationLevel(),
+                    req.getRageLevel(),
+                    req.getSharpEyesLevel(),
+                    req.isDecentSharpEyes(),
+                    req.isBabyDragonFood()
+            );
+        }
+
+        private static BuffBonus from(int spiritLevel, int empressLevel, int mapleWarriorLevel,
+                                      int meditationLevel, int rageLevel, int sharpEyesLevel,
+                                      boolean decentSharpEyes, boolean babyDragonFood) {
+            int spirit = clamp(spiritLevel, 0, SPIRIT_BLESSING_MAX_LEVEL);
+            int empress = clamp(empressLevel, 0, EMPRESS_BLESSING_MAX_LEVEL);
+            int sharpEyes = clamp(sharpEyesLevel, 0, SHARP_EYES_MAX_LEVEL);
+            int spiritAttack = spirit;
+            int empressAttack = empress;
+            int attack = spiritAttack
+                    + empressAttack
+                    + rageAttack(clamp(rageLevel, 0, RAGE_MAX_LEVEL))
+                    + (babyDragonFood ? 7 : 0);
+            int magic = spirit * 2
+                    + empress * 2
+                    + clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL);
+            int critRate = sharpEyes == 0 ? 0 : (int) Math.floor((sharpEyes + 1) / 2.0);
+            int critDmgPP = sharpEyes == 0 ? 0 : 10 + sharpEyes;
+
+            if (decentSharpEyes) {
+                critRate += 10;
+                critDmgPP += 15;
+            }
+
+            return new BuffBonus(
+                    spiritAttack,
+                    empressAttack,
+                    attack,
+                    magic,
+                    mapleWarriorPercent(clamp(mapleWarriorLevel, 0, MAPLE_WARRIOR_MAX_LEVEL)),
+                    critRate,
+                    critDmgPP
+            );
+        }
+
+        private static int mapleWarriorPercent(int level) {
+            return level == 0 ? 0 : (int) Math.floor((level + 1) / 2.0);
+        }
+
+        private static int rageAttack(int level) {
+            if (level == 0) return 0;
+            if (level <= 16) return (int) Math.floor((level + 1) / 2.0);
+            return 8 + (level - 16);
+        }
     }
 }

@@ -34,6 +34,28 @@ public class DamageCompareRequest {
     @Min(0)
     private int empressBlessingLevel;
 
+    @Min(0)
+    private int mapleWarriorLevel;
+
+    @Min(0)
+    private int meditationLevel;
+
+    @Min(0)
+    private int rageLevel;
+
+    @Min(0)
+    private int sharpEyesLevel;
+
+    private boolean decentSharpEyes;
+
+    private boolean babyDragonFood;
+
+    @Min(0)
+    private int critRate;
+
+    @Min(0)
+    private int critDmgPP;
+
     @Valid
     private List<ItemStatFullDto> equippedItems;
 

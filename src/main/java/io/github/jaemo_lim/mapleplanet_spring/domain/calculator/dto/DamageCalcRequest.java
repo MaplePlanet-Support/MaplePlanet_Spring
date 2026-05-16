@@ -33,4 +33,20 @@ public class DamageCalcRequest {
 
     @Min(0)
     private int empressBlessingLevel; // 여제의 축복 레벨 (0 = 미적용)
+
+    @Min(0)
+    private int mapleWarriorLevel;    // 메이플 용사 레벨
+
+    @Min(0)
+    private int meditationLevel;      // 메디테이션 레벨
+
+    @Min(0)
+    private int rageLevel;            // 분노 레벨
+
+    @Min(0)
+    private int sharpEyesLevel;       // 샤프아이즈 레벨
+
+    private boolean decentSharpEyes;  // 쓸만한 샤프아이즈
+
+    private boolean babyDragonFood;   // 아기용의 이유식
 }
