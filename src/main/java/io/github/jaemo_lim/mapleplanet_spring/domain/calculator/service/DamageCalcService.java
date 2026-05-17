@@ -138,11 +138,16 @@ public class DamageCalcService {
         }
 
         int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
-        int critDmgPP = req.getCritDmgPP() + buff.critDmgPP();
+        int critDmgPP = req.getCritDmgPP() + buff.critDmgPP(); // 절대값(%p)
+        int skillCoeff = req.getSkillCoeff() > 0 ? req.getSkillCoeff() : 150;
         int damagePercent = totalDmgPercent + totalBossDmgPercent + item.getTotalDmgPercent() + item.getBossDmgPercent();
         double skillMultiplier = 1.0;
         double damageMultiplier = 1 + damagePercent / 100.0;
-        double critMultiplier = 1 + (critRate / 100.0) * (critDmgPP / 100.0);
+        // 올바른 공식: 1 + 크리확 × 크리보너스절대값 / 스킬계수
+        // 예) SE30(140%p) + 파워스트라이크(260%p): 크리배율 = (260+140)/260 = 1.538
+        double critMultiplier = critRate > 0
+                ? 1 + (critRate / 100.0) * (critDmgPP / (double) skillCoeff)
+                : 1.0;
 
         return new DamageResult(damage, magic, damage * skillMultiplier * damageMultiplier * critMultiplier);
     }
@@ -235,12 +240,13 @@ public class DamageCalcService {
             int magic = spirit * 2
                     + empress * 2
                     + clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL);
+            // 샾30 = +140%p 절대값 (합연산), 선형 보간
             int critRate = sharpEyes == 0 ? 0 : (int) Math.floor((sharpEyes + 1) / 2.0);
-            int critDmgPP = sharpEyes == 0 ? 0 : 10 + sharpEyes;
+            int critDmgPP = sharpEyes == 0 ? 0 : (int) Math.round(sharpEyes * 140.0 / 30.0);
 
             if (decentSharpEyes) {
                 critRate += 10;
-                critDmgPP += 15;
+                critDmgPP += 115; // 쓸샾 = +115%p 절대값 (합연산)
             }
 
             return new BuffBonus(

@@ -55,7 +55,10 @@ public class DamageCompareRequest {
     private int critRate;
 
     @Min(0)
-    private int critDmgPP;
+    private int critDmgPP; // 크리 시 추가 퍼뎀 절대값(%p). 예) SE30=140, CT30=100
+
+    @Min(1)
+    private int skillCoeff = 150; // 기준 스킬 계수(%p). 예) 럭키세븐=150, 파워스트라이크=260
 
     @Valid
     @Size(max = 32)
