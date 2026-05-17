@@ -19,22 +19,26 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CharacterPresetService {
 
+    private static final int MAX_CONFIG_JSON_LENGTH = 20_000;
+
     private final CharacterPresetRepository presetRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public PresetSaveResponse save(PresetSaveRequest request) {
         String configJson = toJson(request.getConfig());
-        Optional<CharacterPreset> existing = presetRepository.findByNickname(request.getNickname());
+        if (configJson.length() > MAX_CONFIG_JSON_LENGTH) {
+            throw new RuntimeException("Preset config is too large.");
+        }
 
+        Optional<CharacterPreset> existing = presetRepository.findByNickname(request.getNickname());
         CharacterPreset preset;
         if (existing.isEmpty()) {
-            preset = CharacterPreset.create(request.getNickname(), request.getPassword(), configJson);
+            preset = CharacterPreset.create(request.getNickname(), configJson);
             presetRepository.save(preset);
         } else {
             preset = existing.get();
-            validatePassword(preset, request.getPassword());
-            preset.updateConfig(configJson, request.getPassword());
+            preset.updateConfig(configJson);
         }
 
         return new PresetSaveResponse(preset.getNickname(), preset.getSavedAt());
@@ -43,28 +47,17 @@ public class CharacterPresetService {
     @Transactional(readOnly = true)
     public PresetLoadResponse load(PresetLoadRequest request) {
         CharacterPreset preset = presetRepository.findByNickname(request.getNickname())
-                .orElseThrow(() -> new RuntimeException("프리셋을 찾을 수 없습니다"));
-
-        validatePassword(preset, request.getPassword());
+                .orElseThrow(() -> new RuntimeException("Preset not found."));
 
         PresetConfigDto config = fromJson(preset.getConfigJson());
         return new PresetLoadResponse(preset.getNickname(), config);
-    }
-
-    private void validatePassword(CharacterPreset preset, String inputPassword) {
-        if (preset.getPassword() == null || preset.getPassword().isBlank()) {
-            return;
-        }
-        if (!preset.getPassword().equals(inputPassword)) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다");
-        }
     }
 
     private String toJson(PresetConfigDto config) {
         try {
             return objectMapper.writeValueAsString(config);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("설정 데이터 직렬화에 실패했습니다", e);
+            throw new RuntimeException("Failed to serialize preset config.", e);
         }
     }
 
@@ -72,7 +65,7 @@ public class CharacterPresetService {
         try {
             return objectMapper.readValue(json, PresetConfigDto.class);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("설정 데이터 역직렬화에 실패했습니다", e);
+            throw new RuntimeException("Failed to deserialize preset config.", e);
         }
     }
 }

@@ -4,6 +4,7 @@ import io.github.jaemo_lim.mapleplanet_spring.global.enums.WeaponType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -57,14 +58,17 @@ public class DamageCompareRequest {
     private int critDmgPP;
 
     @Valid
+    @Size(max = 32)
     private List<ItemStatFullDto> equippedItems;
 
     @Valid
-    private ItemStatFullDto currentSlotItem; // null = 빈 슬롯
+    private ItemStatFullDto currentSlotItem;
 
-    @NotNull @Valid
+    @NotNull
+    @Valid
     private ItemStatFullDto itemA;
 
-    @NotNull @Valid
+    @NotNull
+    @Valid
     private ItemStatFullDto itemB;
 }

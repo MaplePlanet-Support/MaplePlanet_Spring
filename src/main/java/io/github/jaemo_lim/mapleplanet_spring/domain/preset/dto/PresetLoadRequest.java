@@ -1,6 +1,7 @@
 package io.github.jaemo_lim.mapleplanet_spring.domain.preset.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,7 +10,6 @@ import lombok.NoArgsConstructor;
 public class PresetLoadRequest {
 
     @NotBlank
+    @Size(max = 30)
     private String nickname;
-
-    private String password;
 }

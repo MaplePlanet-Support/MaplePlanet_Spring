@@ -1,6 +1,13 @@
 package io.github.jaemo_lim.mapleplanet_spring.domain.preset.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,26 +27,21 @@ public class CharacterPreset {
     @Column(nullable = false, unique = true, length = 30)
     private String nickname;
 
-    @Column(length = 100)
-    private String password;
-
     @Column(columnDefinition = "TEXT", nullable = false)
     private String configJson;
 
     @Column(nullable = false)
     private LocalDateTime savedAt;
 
-    public static CharacterPreset create(String nickname, String password, String configJson) {
+    public static CharacterPreset create(String nickname, String configJson) {
         CharacterPreset preset = new CharacterPreset();
         preset.nickname = nickname;
-        preset.password = password;
         preset.configJson = configJson;
         return preset;
     }
 
-    public void updateConfig(String configJson, String password) {
+    public void updateConfig(String configJson) {
         this.configJson = configJson;
-        this.password = password;
     }
 
     @PrePersist

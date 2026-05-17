@@ -19,21 +19,21 @@ public class GlobalExceptionHandler {
         List<ErrorResponse.FieldError> errors = e.getBindingResult().getFieldErrors().stream()
                 .map(fe -> new ErrorResponse.FieldError(fe.getField(), fe.getDefaultMessage()))
                 .toList();
-        return ErrorResponse.of("입력값이 올바르지 않습니다.", errors);
+        return ErrorResponse.of("Invalid request.", errors);
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException e) {
         String message = e.getMessage();
-        if ("비밀번호가 일치하지 않습니다".equals(message)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ErrorResponse.of(message));
-        }
-        if ("프리셋을 찾을 수 없습니다".equals(message)) {
+        if ("Preset not found.".equals(message)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ErrorResponse.of(message));
         }
+        if ("Preset config is too large.".equals(message)) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                    .body(ErrorResponse.of(message));
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErrorResponse.of(message != null ? message : "서버 오류가 발생했습니다."));
+                .body(ErrorResponse.of(message != null ? message : "Internal server error."));
     }
 }
