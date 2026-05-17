@@ -101,6 +101,8 @@ public class DamageCalcService {
                 resultB.magic(),
                 resultA.expectedDamage(),
                 resultB.expectedDamage(),
+                resultA.normalExpectedDamage(),
+                resultB.normalExpectedDamage(),
                 statB - statA,
                 resultB.damage() - resultA.damage(),
                 expectedDiffPct,
@@ -140,16 +142,17 @@ public class DamageCalcService {
         int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
         int critDmgPP = req.getCritDmgPP() + buff.critDmgPP(); // 절대값(%p)
         int skillCoeff = req.getSkillCoeff() > 0 ? req.getSkillCoeff() : 150;
-        int damagePercent = totalDmgPercent + totalBossDmgPercent + item.getTotalDmgPercent() + item.getBossDmgPercent();
-        double skillMultiplier = 1.0;
-        double damageMultiplier = 1 + damagePercent / 100.0;
+        int normalDmgPercent = totalDmgPercent + item.getTotalDmgPercent();
+        int bossDmgPercent   = normalDmgPercent + totalBossDmgPercent + item.getBossDmgPercent();
         // 올바른 공식: 1 + 크리확 × 크리보너스절대값 / 스킬계수
         // 예) SE30(140%p) + 파워스트라이크(260%p): 크리배율 = (260+140)/260 = 1.538
         double critMultiplier = critRate > 0
                 ? 1 + (critRate / 100.0) * (critDmgPP / (double) skillCoeff)
                 : 1.0;
+        double normalExpected = damage * (1 + normalDmgPercent / 100.0) * critMultiplier;
+        double bossExpected   = damage * (1 + bossDmgPercent   / 100.0) * critMultiplier;
 
-        return new DamageResult(damage, magic, damage * skillMultiplier * damageMultiplier * critMultiplier);
+        return new DamageResult(damage, magic, bossExpected, normalExpected);
     }
 
     private int calcTotalAttackValue(int baseAttack, int attackPercent) {
@@ -187,7 +190,7 @@ public class DamageCalcService {
         return Math.max(min, Math.min(max, value));
     }
 
-    private record DamageResult(double damage, double magic, double expectedDamage) {
+    private record DamageResult(double damage, double magic, double expectedDamage, double normalExpectedDamage) {
     }
 
     private record BuffBonus(
