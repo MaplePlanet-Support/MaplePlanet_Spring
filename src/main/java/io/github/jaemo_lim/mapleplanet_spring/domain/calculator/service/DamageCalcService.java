@@ -62,6 +62,7 @@ public class DamageCalcService {
         int totalFlatStat = sum(req.getEquippedItems(), "flat");
         int totalFlatSubStat = sum(req.getEquippedItems(), "subFlat");
         int totalStatPercent = sum(req.getEquippedItems(), "percent");
+        int totalAllStatPercent = sum(req.getEquippedItems(), "allStatPercent");
         int totalFlatAtk = sum(req.getEquippedItems(), "atk");
         int totalAtkPercent = sum(req.getEquippedItems(), "atkPercent");
         int totalCritRate = sum(req.getEquippedItems(), "critRate");
@@ -72,6 +73,7 @@ public class DamageCalcService {
             totalFlatStat -= req.getCurrentSlotItem().getFlatStat();
             totalFlatSubStat -= req.getCurrentSlotItem().getFlatSubStat();
             totalStatPercent -= req.getCurrentSlotItem().getStatPercent();
+            totalAllStatPercent -= req.getCurrentSlotItem().getAllStatPercent();
             totalFlatAtk -= req.getCurrentSlotItem().getFlatAtk();
             totalAtkPercent -= req.getCurrentSlotItem().getAtkPercent();
             totalCritRate -= req.getCurrentSlotItem().getCritRateBonus();
@@ -79,13 +81,13 @@ public class DamageCalcService {
             totalBossDmgPercent -= req.getCurrentSlotItem().getBossDmgPercent();
         }
 
-        double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, req.getItemA());
-        double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, req.getItemB());
+        double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemA());
+        double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemB());
 
         DamageResult resultA = calcDamage(req, buff, statA, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
-                totalCritRate, totalDmgPercent, totalBossDmgPercent, req.getItemA());
+                totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemA());
         DamageResult resultB = calcDamage(req, buff, statB, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
-                totalCritRate, totalDmgPercent, totalBossDmgPercent, req.getItemB());
+                totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemB());
 
         double expectedDiffPct = resultA.expectedDamage() == 0
                 ? 0
@@ -110,18 +112,21 @@ public class DamageCalcService {
         );
     }
 
-    private double calcStat(int baseStat, int mapleWarriorPercent, int totalFlat, int totalPercent, ItemStatFullDto item) {
+    private double calcStat(int baseStat, int mapleWarriorPercent, int totalFlat, int totalPercent, int totalAllStatPercent, ItemStatFullDto item) {
         double directStat = applyMapleWarrior(baseStat, mapleWarriorPercent);
+        int effectivePercent = totalPercent + totalAllStatPercent + item.getStatPercent() + item.getAllStatPercent();
         return (directStat + totalFlat + item.getFlatStat())
-                * (1 + (totalPercent + item.getStatPercent()) / 100.0);
+                * (1 + effectivePercent / 100.0);
     }
 
     private DamageResult calcDamage(DamageCompareRequest req, BuffBonus buff, double mainStat,
                                     int totalFlatSubStat, int totalFlatAtk, int totalAtkPercent, int totalCritRate,
-                                    int totalDmgPercent, int totalBossDmgPercent, ItemStatFullDto item) {
+                                    int totalDmgPercent, int totalBossDmgPercent, int totalAllStatPercent, ItemStatFullDto item) {
         boolean magicWeapon = req.getWeaponType().isMagicWeapon();
         int attackPercent = req.getAtkPercent() + totalAtkPercent + item.getAtkPercent();
-        int subStat = req.getSubStat() + totalFlatSubStat + item.getFlatSubStat();
+        int flatSubTotal = req.getSubStat() + totalFlatSubStat + item.getFlatSubStat();
+        int effectiveAllStatPercent = totalAllStatPercent + item.getAllStatPercent();
+        int subStat = (int) Math.floor(flatSubTotal * (1 + effectiveAllStatPercent / 100.0));
         double damage;
         double magic = 0;
 
@@ -177,6 +182,7 @@ public class DamageCalcService {
             case "flat" -> items.stream().mapToInt(ItemStatFullDto::getFlatStat).sum();
             case "subFlat" -> items.stream().mapToInt(ItemStatFullDto::getFlatSubStat).sum();
             case "percent" -> items.stream().mapToInt(ItemStatFullDto::getStatPercent).sum();
+            case "allStatPercent" -> items.stream().mapToInt(ItemStatFullDto::getAllStatPercent).sum();
             case "atk" -> items.stream().mapToInt(ItemStatFullDto::getFlatAtk).sum();
             case "atkPercent" -> items.stream().mapToInt(ItemStatFullDto::getAtkPercent).sum();
             case "critRate" -> items.stream().mapToInt(ItemStatFullDto::getCritRateBonus).sum();

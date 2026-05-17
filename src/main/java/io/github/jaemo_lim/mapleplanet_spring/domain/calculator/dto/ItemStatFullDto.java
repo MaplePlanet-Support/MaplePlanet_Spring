@@ -31,4 +31,7 @@ public class ItemStatFullDto {
 
     @Min(0)
     private int bossDmgPercent; // 보스 공격 시 데미지%
+
+    @Min(0)
+    private int allStatPercent; // 올스탯%
 }
