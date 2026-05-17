@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "character")
+@Table(name = "characters")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
