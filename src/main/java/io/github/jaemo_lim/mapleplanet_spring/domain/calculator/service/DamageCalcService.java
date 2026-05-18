@@ -24,11 +24,12 @@ public class DamageCalcService {
         double damage;
 
         if (magicWeapon) {
+            // 총마력 = (주스탯 + 무기마력 + 장비마력 + 버프마력) × (1 + 마력%)
             totalMagic = calcTotalAttackValue(
-                    req.getWeaponAtk() + req.getEquipAtk() + buff.magic(),
+                    (int) Math.floor(buffedMainStat) + req.getWeaponAtk() + req.getEquipAtk() + buff.magic(),
                     req.getAtkPercent()
             );
-            damage = calcMagicDamage(buffedMainStat, totalMagic);
+            damage = calcMagicDamage(totalMagic);
         } else {
             totalAtk = calcTotalAttackValue(
                     req.getWeaponAtk() + req.getEquipAtk() + buff.attack(),
@@ -131,11 +132,12 @@ public class DamageCalcService {
         double magic = 0;
 
         if (magicWeapon) {
+            // 총마력 = (주스탯 + 무기마력 + 장비마력 + 버프마력) × (1 + 마력%)
             magic = calcTotalAttackValue(
-                    (int) Math.floor(req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.magic()),
+                    (int) Math.floor(mainStat) + req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.magic(),
                     attackPercent
             );
-            damage = calcMagicDamage(mainStat, magic);
+            damage = calcMagicDamage(magic);
         } else {
             int totalAtk = calcTotalAttackValue(
                     req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.attack(),
@@ -168,8 +170,9 @@ public class DamageCalcService {
         return (mainStat * weaponConst + subStat) * totalAtk / 100.0;
     }
 
-    private double calcMagicDamage(double mainStat, double totalMagic) {
-        return 0.0033665 * totalMagic * totalMagic + 3.3 * totalMagic + 0.5 * mainStat;
+    private double calcMagicDamage(double totalMagic) {
+        // 총마력에 INT가 포함된 이후 공식 - 필요시 수정
+        return totalMagic;
     }
 
     private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
