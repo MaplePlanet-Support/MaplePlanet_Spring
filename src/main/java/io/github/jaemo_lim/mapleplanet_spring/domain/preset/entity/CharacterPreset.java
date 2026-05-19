@@ -30,18 +30,31 @@ public class CharacterPreset {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String configJson;
 
+    @Column(length = 64)
+    private String passwordHash;
+
     @Column(nullable = false)
     private LocalDateTime savedAt;
 
-    public static CharacterPreset create(String nickname, String configJson) {
+    public static CharacterPreset create(String nickname, String configJson, String passwordHash) {
         CharacterPreset preset = new CharacterPreset();
         preset.nickname = nickname;
         preset.configJson = configJson;
+        preset.passwordHash = passwordHash;
         return preset;
     }
 
-    public void updateConfig(String configJson) {
+    public void updateConfig(String configJson, String passwordHash) {
         this.configJson = configJson;
+        this.passwordHash = passwordHash;
+    }
+
+    public boolean hasPassword() {
+        return passwordHash != null;
+    }
+
+    public boolean passwordMatches(String hash) {
+        return passwordHash != null && passwordHash.equals(hash);
     }
 
     @PrePersist
