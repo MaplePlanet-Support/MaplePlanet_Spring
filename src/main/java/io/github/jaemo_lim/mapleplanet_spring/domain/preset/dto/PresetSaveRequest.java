@@ -15,6 +15,9 @@ public class PresetSaveRequest {
     @Size(max = 30)
     private String nickname;
 
+    @Size(max = 30)
+    private String password;
+
     @NotNull
     @Valid
     private PresetConfigDto config;
