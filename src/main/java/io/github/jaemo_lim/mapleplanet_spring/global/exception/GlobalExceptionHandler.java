@@ -33,6 +33,11 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                     .body(ErrorResponse.of(message));
         }
+        if ("비밀번호가 틀렸습니다.".equals(message) || "비밀번호를 설정해주세요.".equals(message)
+                || "해당 닉네임을 찾을 수 없습니다.".equals(message)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ErrorResponse.of(message));
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of(message != null ? message : "Internal server error."));
     }

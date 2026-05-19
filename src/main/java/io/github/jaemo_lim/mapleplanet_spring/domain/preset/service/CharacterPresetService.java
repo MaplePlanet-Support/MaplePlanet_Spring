@@ -51,7 +51,7 @@ public class CharacterPresetService {
                 throw new RuntimeException("비밀번호가 틀렸습니다.");
             }
             preset.updateConfig(configJson, newHash);
-            presetRepository.save(preset);
+            presetRepository.saveAndFlush(preset);
         }
 
         return new PresetSaveResponse(preset.getNickname(), preset.getSavedAt());
