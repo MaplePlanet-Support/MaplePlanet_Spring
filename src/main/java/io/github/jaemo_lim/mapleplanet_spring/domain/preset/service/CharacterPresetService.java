@@ -35,6 +35,9 @@ public class CharacterPresetService {
         if (configJson.length() > MAX_CONFIG_JSON_LENGTH) {
             throw new RuntimeException("Preset config is too large.");
         }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new RuntimeException("비밀번호를 설정해주세요.");
+        }
         String newHash = hashPassword(request.getPassword());
 
         Optional<CharacterPreset> existing = presetRepository.findByNickname(request.getNickname());
@@ -48,6 +51,7 @@ public class CharacterPresetService {
                 throw new RuntimeException("비밀번호가 틀렸습니다.");
             }
             preset.updateConfig(configJson, newHash);
+            presetRepository.save(preset);
         }
 
         return new PresetSaveResponse(preset.getNickname(), preset.getSavedAt());
