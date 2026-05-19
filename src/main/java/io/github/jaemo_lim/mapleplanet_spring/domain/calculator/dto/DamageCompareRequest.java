@@ -23,6 +23,8 @@ public class DamageCompareRequest {
     @NotNull
     private WeaponType weaponType;
 
+    private WeaponType itemBWeaponType;
+
     @Min(0)
     private int weaponAtk;
 
