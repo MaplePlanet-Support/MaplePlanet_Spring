@@ -12,4 +12,7 @@ public class PresetLoadRequest {
     @NotBlank
     @Size(max = 30)
     private String nickname;
+
+    @Size(max = 30)
+    private String password;
 }
