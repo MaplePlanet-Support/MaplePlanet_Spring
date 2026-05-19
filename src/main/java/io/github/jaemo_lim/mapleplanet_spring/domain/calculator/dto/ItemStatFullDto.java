@@ -34,4 +34,10 @@ public class ItemStatFullDto {
 
     @Min(0)
     private int allStatPercent; // 올스탯%
+
+    @Min(0)
+    private int flatAllStat;    // 깡 올스탯
+
+    @Min(0)
+    private int subStatPercent; // 부스탯%
 }

@@ -53,6 +53,11 @@ public class DamageCompareRequest {
 
     private boolean babyDragonFood;
 
+    private boolean hontaleVictory;
+
+    @Min(0)
+    private int ammoAtk;
+
     @Min(0)
     private int critRate;
 

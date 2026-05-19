@@ -49,4 +49,9 @@ public class DamageCalcRequest {
     private boolean decentSharpEyes;  // 쓸만한 샤프아이즈
 
     private boolean babyDragonFood;   // 아기용의 이유식
+
+    private boolean hontaleVictory;   // 혼테일 원정대의 승리 (공+30, 마+40)
+
+    @Min(0)
+    private int ammoAtk;              // 화살/표창/불릿 공격력 (공격력%에 영향 안 받음)
 }

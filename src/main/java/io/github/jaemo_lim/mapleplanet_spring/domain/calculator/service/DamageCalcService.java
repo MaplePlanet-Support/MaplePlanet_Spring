@@ -25,15 +25,14 @@ public class DamageCalcService {
         double damage;
 
         if (magicWeapon) {
-            // 총마력 = (주스탯 + 무기마력 + 장비마력 + 버프마력) × (1 + 마력%)
+
             totalMagic = calcTotalAttackValue(
                     (int) Math.floor(buffedMainStat) + req.getWeaponAtk() + req.getEquipAtk() + buff.magic(),
                     req.getAtkPercent()
             );
             damage = calcMagicDamage(totalMagic);
         } else {
-            totalAtk = calcTotalAttackValue(req.getWeaponAtk(), req.getAtkPercent())
-                    + req.getEquipAtk() + buff.attack();
+            totalAtk = calcPhysicalTotalAttack(req.getWeaponAtk(), req.getEquipAtk(), buff.attack(), req.getAmmoAtk(), req.getAtkPercent());
             damage = calcPhysicalDamage(
                     buffedMainStat,
                     req.getSubStat(),
@@ -63,6 +62,8 @@ public class DamageCalcService {
         int totalFlatSubStat = sum(req.getEquippedItems(), "subFlat");
         int totalStatPercent = sum(req.getEquippedItems(), "percent");
         int totalAllStatPercent = sum(req.getEquippedItems(), "allStatPercent");
+        int totalFlatAllStat = sum(req.getEquippedItems(), "flatAllStat");
+        int totalSubStatPercent = sum(req.getEquippedItems(), "subStatPercent");
         int totalFlatAtk = sum(req.getEquippedItems(), "atk");
         int totalAtkPercent = sum(req.getEquippedItems(), "atkPercent");
         int totalCritRate = sum(req.getEquippedItems(), "critRate");
@@ -74,6 +75,8 @@ public class DamageCalcService {
             totalFlatSubStat -= req.getCurrentSlotItem().getFlatSubStat();
             totalStatPercent -= req.getCurrentSlotItem().getStatPercent();
             totalAllStatPercent -= req.getCurrentSlotItem().getAllStatPercent();
+            totalFlatAllStat -= req.getCurrentSlotItem().getFlatAllStat();
+            totalSubStatPercent -= req.getCurrentSlotItem().getSubStatPercent();
             totalFlatAtk -= req.getCurrentSlotItem().getFlatAtk();
             totalAtkPercent -= req.getCurrentSlotItem().getAtkPercent();
             totalCritRate -= req.getCurrentSlotItem().getCritRateBonus();
@@ -81,12 +84,12 @@ public class DamageCalcService {
             totalBossDmgPercent -= req.getCurrentSlotItem().getBossDmgPercent();
         }
 
-        double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemA());
-        double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemB());
+        double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalFlatAllStat, totalStatPercent, totalAllStatPercent, req.getItemA());
+        double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalFlatAllStat, totalStatPercent, totalAllStatPercent, req.getItemB());
 
-        DamageResult resultA = calcDamage(req, buff, req.getWeaponType(), statA, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+        DamageResult resultA = calcDamage(req, buff, req.getWeaponType(), statA, totalFlatSubStat, totalFlatAllStat, totalSubStatPercent, totalFlatAtk, totalAtkPercent,
                 totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemA());
-        DamageResult resultB = calcDamage(req, buff, getItemBWeaponType(req), statB, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+        DamageResult resultB = calcDamage(req, buff, getItemBWeaponType(req), statB, totalFlatSubStat, totalFlatAllStat, totalSubStatPercent, totalFlatAtk, totalAtkPercent,
                 totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemB());
 
         double expectedDiffPct = resultA.expectedDamage() == 0
@@ -112,26 +115,26 @@ public class DamageCalcService {
         );
     }
 
-    private double calcStat(int baseStat, int mapleWarriorPercent, int totalFlat, int totalPercent, int totalAllStatPercent, ItemStatFullDto item) {
+    private double calcStat(int baseStat, int mapleWarriorPercent, int totalFlat, int totalFlatAllStat, int totalPercent, int totalAllStatPercent, ItemStatFullDto item) {
         double directStat = applyMapleWarrior(baseStat, mapleWarriorPercent);
         int effectivePercent = totalPercent + totalAllStatPercent + item.getStatPercent() + item.getAllStatPercent();
-        return (directStat + totalFlat + item.getFlatStat())
+        return (directStat + totalFlat + totalFlatAllStat + item.getFlatStat() + item.getFlatAllStat())
                 * (1 + effectivePercent / 100.0);
     }
 
     private DamageResult calcDamage(DamageCompareRequest req, BuffBonus buff, WeaponType weaponType, double mainStat,
-                                    int totalFlatSubStat, int totalFlatAtk, int totalAtkPercent, int totalCritRate,
+                                    int totalFlatSubStat, int totalFlatAllStat, int totalSubStatPercent, int totalFlatAtk, int totalAtkPercent, int totalCritRate,
                                     int totalDmgPercent, int totalBossDmgPercent, int totalAllStatPercent, ItemStatFullDto item) {
         boolean magicWeapon = weaponType.isMagicWeapon();
         int attackPercent = totalAtkPercent + item.getAtkPercent();
-        int flatSubTotal = req.getSubStat() + totalFlatSubStat + item.getFlatSubStat();
-        int effectiveAllStatPercent = totalAllStatPercent + item.getAllStatPercent();
-        int subStat = (int) Math.floor(flatSubTotal * (1 + effectiveAllStatPercent / 100.0));
+        int flatSubTotal = req.getSubStat() + totalFlatSubStat + totalFlatAllStat + item.getFlatSubStat() + item.getFlatAllStat();
+        int effectiveSubPercent = totalAllStatPercent + totalSubStatPercent + item.getAllStatPercent() + item.getSubStatPercent();
+        int subStat = (int) Math.floor(flatSubTotal * (1 + effectiveSubPercent / 100.0));
         double damage;
         double magic = 0;
 
         if (magicWeapon) {
-            // 총마력 = (주스탯 + 무기마력 + 장비마력 + 버프마력) × (1 + 마력%)
+            // 珥앸쭏??= (二쇱뒪??+ 臾닿린留덈젰 + ?λ퉬留덈젰 + 踰꾪봽留덈젰) 횞 (1 + 留덈젰%)
             magic = calcTotalAttackValue(
                     (int) Math.floor(mainStat) + req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.magic(),
                     attackPercent
@@ -141,18 +144,17 @@ public class DamageCalcService {
             boolean comparingWeapon = req.getWeaponAtk() == 0 && item.getFlatAtk() > 0;
             int weaponAtk = comparingWeapon ? item.getFlatAtk() : req.getWeaponAtk();
             int equipAtk = comparingWeapon ? totalFlatAtk : totalFlatAtk + item.getFlatAtk();
-            int totalAtk = calcTotalAttackValue(weaponAtk, attackPercent)
-                    + equipAtk + buff.attack();
+            int totalAtk = calcPhysicalTotalAttack(weaponAtk, equipAtk, buff.attack(), req.getAmmoAtk(), attackPercent);
             damage = calcPhysicalDamage(mainStat, subStat, weaponType.getConstant(), totalAtk);
         }
 
         int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
-        int critDmgPP = req.getCritDmgPP() + buff.critDmgPP(); // 절대값(%p)
+        int critDmgPP = req.getCritDmgPP() + buff.critDmgPP(); // ?덈?媛?%p)
         int skillCoeff = req.getSkillCoeff() > 0 ? req.getSkillCoeff() : 150;
         int normalDmgPercent = totalDmgPercent + item.getTotalDmgPercent();
         int bossDmgPercent   = normalDmgPercent + totalBossDmgPercent + item.getBossDmgPercent();
-        // 올바른 공식: 1 + 크리확 × 크리보너스절대값 / 스킬계수
-        // 예) SE30(140%p) + 파워스트라이크(260%p): 크리배율 = (260+140)/260 = 1.538
+        // ?щ컮瑜?怨듭떇: 1 + ?щ━??횞 ?щ━蹂대꼫?ㅼ젅?媛?/ ?ㅽ궗怨꾩닔
+        // ?? SE30(140%p) + ?뚯썙?ㅽ듃?쇱씠??260%p): ?щ━諛곗쑉 = (260+140)/260 = 1.538
         double critMultiplier = critRate > 0
                 ? 1 + (critRate / 100.0) * (critDmgPP / (double) skillCoeff)
                 : 1.0;
@@ -162,6 +164,73 @@ public class DamageCalcService {
         return new DamageResult(damage, magic, bossExpected, normalExpected);
     }
 
+    public StatConvResponse statConv(StatConvRequest req) {
+        BuffBonus buff = BuffBonus.from(req);
+        double buffedBaseStat = applyMapleWarrior(req.getBaseStat(), buff.mapleWarriorPercent());
+        boolean magicWeapon = req.getWeaponType().isMagicWeapon();
+
+        int totalFlatStat = sum(req.getEquippedItems(), "flat");
+        int totalFlatAllStat = sum(req.getEquippedItems(), "flatAllStat");
+        int totalFlatSubStat = sum(req.getEquippedItems(), "subFlat");
+        int totalStatPct = sum(req.getEquippedItems(), "percent");
+        int totalSubStatPct = sum(req.getEquippedItems(), "subStatPercent");
+        int totalAllStatPct = sum(req.getEquippedItems(), "allStatPercent");
+        int totalAtkPercent = sum(req.getEquippedItems(), "atkPercent");
+        int totalEquipAtk = sum(req.getEquippedItems(), "atk");
+        int totalBossDmgPct = sum(req.getEquippedItems(), "bossDmg");
+        int totalDmgPct = sum(req.getEquippedItems(), "totalDmg");
+
+        double flatMainSum = buffedBaseStat + totalFlatStat + totalFlatAllStat;
+        int flatSubSum = req.getSubStat() + totalFlatSubStat + totalFlatAllStat;
+        int totalMainPct = totalStatPct + totalAllStatPct;
+        int totalSubPct = totalSubStatPct + totalAllStatPct;
+
+        double currentMainStat = flatMainSum * (1 + totalMainPct / 100.0);
+        int finalSubStat = (int) Math.floor(flatSubSum * (1 + totalSubPct / 100.0));
+        double statPct1ToMainStat = flatMainSum / 100.0;
+        double allStatPct1ToMainStat = magicWeapon
+                ? flatMainSum / 100.0
+                : flatMainSum / 100.0 + flatSubSum / 100.0 / req.getWeaponType().getConstant();
+
+        int totalAttack;
+        double atkPct1;
+        double flatAtk1ToMainStat;
+        double atkPct1ToMainStat;
+        double bossDmgPct1ToMainStat;
+        double totalDmgPct1ToMainStat;
+
+        if (magicWeapon) {
+            int magicBase = (int) Math.floor(currentMainStat) + req.getWeaponAtk() + totalEquipAtk + buff.magic();
+            totalAttack = calcTotalAttackValue(magicBase, totalAtkPercent);
+            atkPct1 = magicBase / 100.0;
+            double magicMultiplier = 1 + totalAtkPercent / 100.0;
+            flatAtk1ToMainStat = 1.0;
+            atkPct1ToMainStat = atkPct1 / magicMultiplier;
+            bossDmgPct1ToMainStat = totalAttack / ((100.0 + totalDmgPct + totalBossDmgPct) * magicMultiplier);
+            totalDmgPct1ToMainStat = totalAttack / ((100.0 + totalDmgPct) * magicMultiplier);
+        } else {
+            totalAttack = calcPhysicalTotalAttack(req.getWeaponAtk(), totalEquipAtk, buff.attack(), req.getAmmoAtk(), totalAtkPercent);
+            atkPct1 = req.getWeaponAtk() / 100.0;
+            double damageStat = currentMainStat + finalSubStat / req.getWeaponType().getConstant();
+            flatAtk1ToMainStat = totalAttack == 0 ? 0 : damageStat / totalAttack;
+            atkPct1ToMainStat = atkPct1 * flatAtk1ToMainStat;
+            bossDmgPct1ToMainStat = damageStat / (100.0 + totalDmgPct + totalBossDmgPct);
+            totalDmgPct1ToMainStat = damageStat / (100.0 + totalDmgPct);
+        }
+
+        return new StatConvResponse(
+                round2(statPct1ToMainStat),
+                round2(allStatPct1ToMainStat),
+                round2(atkPct1ToMainStat),
+                round2(flatAtk1ToMainStat),
+                round2(bossDmgPct1ToMainStat),
+                round2(totalDmgPct1ToMainStat),
+                round2(currentMainStat),
+                finalSubStat,
+                totalAttack,
+                round2(atkPct1)
+        );
+    }
     private WeaponType getItemBWeaponType(DamageCompareRequest req) {
         return req.getItemBWeaponType() != null ? req.getItemBWeaponType() : req.getWeaponType();
     }
@@ -170,17 +239,25 @@ public class DamageCalcService {
         return (int) Math.floor(baseAttack * (1 + attackPercent / 100.0));
     }
 
+    private int calcPhysicalTotalAttack(int weaponAtk, int equipAtk, int buffAtk, int ammoAtk, int attackPercent) {
+        return calcTotalAttackValue(weaponAtk, attackPercent) + equipAtk + buffAtk + ammoAtk;
+    }
+
     private double calcPhysicalDamage(double mainStat, int subStat, double weaponConst, int totalAtk) {
-        return (mainStat * weaponConst + subStat) * totalAtk / 100.0;
+        return Math.floor((mainStat * weaponConst + subStat) * totalAtk / 100.0);
     }
 
     private double calcMagicDamage(double totalMagic) {
-        // 총마력에 INT가 포함된 이후 공식 - 필요시 수정
-        return totalMagic;
+        // 珥앸쭏?μ뿉 INT媛 ?ы븿???댄썑 怨듭떇 - ?꾩슂???섏젙
+        return Math.floor(totalMagic);
     }
 
     private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
         return baseStat + Math.floor(baseStat * mapleWarriorPercent / 100.0);
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     private int sum(List<ItemStatFullDto> items, String type) {
@@ -190,6 +267,8 @@ public class DamageCalcService {
             case "subFlat" -> items.stream().mapToInt(ItemStatFullDto::getFlatSubStat).sum();
             case "percent" -> items.stream().mapToInt(ItemStatFullDto::getStatPercent).sum();
             case "allStatPercent" -> items.stream().mapToInt(ItemStatFullDto::getAllStatPercent).sum();
+            case "flatAllStat" -> items.stream().mapToInt(ItemStatFullDto::getFlatAllStat).sum();
+            case "subStatPercent" -> items.stream().mapToInt(ItemStatFullDto::getSubStatPercent).sum();
             case "atk" -> items.stream().mapToInt(ItemStatFullDto::getFlatAtk).sum();
             case "atkPercent" -> items.stream().mapToInt(ItemStatFullDto::getAtkPercent).sum();
             case "critRate" -> items.stream().mapToInt(ItemStatFullDto::getCritRateBonus).sum();
@@ -224,7 +303,8 @@ public class DamageCalcService {
                     req.getRageLevel(),
                     req.getSharpEyesLevel(),
                     req.isDecentSharpEyes(),
-                    req.isBabyDragonFood()
+                    req.isBabyDragonFood(),
+                    req.isHontaleVictory()
             );
         }
 
@@ -237,13 +317,28 @@ public class DamageCalcService {
                     req.getRageLevel(),
                     req.getSharpEyesLevel(),
                     req.isDecentSharpEyes(),
-                    req.isBabyDragonFood()
+                    req.isBabyDragonFood(),
+                    req.isHontaleVictory()
+            );
+        }
+
+        static BuffBonus from(StatConvRequest req) {
+            return from(
+                    req.getBlessingLevel(),
+                    req.getEmpressBlessingLevel(),
+                    req.getMapleWarriorLevel(),
+                    req.getMeditationLevel(),
+                    req.getRageLevel(),
+                    0,
+                    false,
+                    req.isBabyDragonFood(),
+                    req.isHontaleVictory()
             );
         }
 
         private static BuffBonus from(int spiritLevel, int empressLevel, int mapleWarriorLevel,
                                       int meditationLevel, int rageLevel, int sharpEyesLevel,
-                                      boolean decentSharpEyes, boolean babyDragonFood) {
+                                      boolean decentSharpEyes, boolean babyDragonFood, boolean hontaleVictory) {
             int spirit = clamp(spiritLevel, 0, SPIRIT_BLESSING_MAX_LEVEL);
             int empress = clamp(empressLevel, 0, EMPRESS_BLESSING_MAX_LEVEL);
             int sharpEyes = clamp(sharpEyesLevel, 0, SHARP_EYES_MAX_LEVEL);
@@ -252,17 +347,19 @@ public class DamageCalcService {
             int attack = spiritAttack
                     + empressAttack
                     + rageAttack(clamp(rageLevel, 0, RAGE_MAX_LEVEL))
-                    + (babyDragonFood ? 7 : 0);
+                    + (babyDragonFood ? 7 : 0)
+                    + (hontaleVictory ? 30 : 0);
             int magic = spirit * 2
                     + empress * 2
-                    + clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL);
-            // 샾30 = +140%p 절대값 (합연산), 선형 보간
+                    + clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL)
+                    + (hontaleVictory ? 40 : 0);
+            // ??0 = +140%p ?덈?媛?(?⑹뿰??, ?좏삎 蹂닿컙
             int critRate = sharpEyes == 0 ? 0 : (int) Math.floor((sharpEyes + 1) / 2.0);
             int critDmgPP = sharpEyes == 0 ? 0 : (int) Math.round(sharpEyes * 140.0 / 30.0);
 
             if (decentSharpEyes) {
                 critRate += 10;
-                critDmgPP += 115; // 쓸샾 = +115%p 절대값 (합연산)
+                critDmgPP += 115; // ?몄꺘 = +115%p ?덈?媛?(?⑹뿰??
             }
 
             return new BuffBonus(

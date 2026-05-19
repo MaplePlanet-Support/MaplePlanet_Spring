@@ -34,4 +34,9 @@ public class StatCompareController {
     public ResponseEntity<DamageCompareResponse> damageCompare(@RequestBody @Valid DamageCompareRequest request) {
         return ResponseEntity.ok(damageCalcService.compare(request));
     }
+
+    @PostMapping("/stat-conv")
+    public ResponseEntity<StatConvResponse> statConv(@RequestBody @Valid StatConvRequest request) {
+        return ResponseEntity.ok(damageCalcService.statConv(request));
+    }
 }
