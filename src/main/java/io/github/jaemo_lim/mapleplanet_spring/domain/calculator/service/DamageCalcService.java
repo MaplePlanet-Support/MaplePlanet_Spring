@@ -1,6 +1,7 @@
 package io.github.jaemo_lim.mapleplanet_spring.domain.calculator.service;
 
 import io.github.jaemo_lim.mapleplanet_spring.domain.calculator.dto.*;
+import io.github.jaemo_lim.mapleplanet_spring.global.enums.WeaponType;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,10 +32,8 @@ public class DamageCalcService {
             );
             damage = calcMagicDamage(totalMagic);
         } else {
-            totalAtk = calcTotalAttackValue(
-                    req.getWeaponAtk() + req.getEquipAtk() + buff.attack(),
-                    req.getAtkPercent()
-            );
+            totalAtk = calcTotalAttackValue(req.getWeaponAtk(), req.getAtkPercent())
+                    + req.getEquipAtk() + buff.attack();
             damage = calcPhysicalDamage(
                     buffedMainStat,
                     req.getSubStat(),
@@ -85,9 +84,9 @@ public class DamageCalcService {
         double statA = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemA());
         double statB = calcStat(req.getBaseStat(), buff.mapleWarriorPercent(), totalFlatStat, totalStatPercent, totalAllStatPercent, req.getItemB());
 
-        DamageResult resultA = calcDamage(req, buff, statA, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+        DamageResult resultA = calcDamage(req, buff, req.getWeaponType(), statA, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
                 totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemA());
-        DamageResult resultB = calcDamage(req, buff, statB, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
+        DamageResult resultB = calcDamage(req, buff, getItemBWeaponType(req), statB, totalFlatSubStat, totalFlatAtk, totalAtkPercent,
                 totalCritRate, totalDmgPercent, totalBossDmgPercent, totalAllStatPercent, req.getItemB());
 
         double expectedDiffPct = resultA.expectedDamage() == 0
@@ -120,11 +119,11 @@ public class DamageCalcService {
                 * (1 + effectivePercent / 100.0);
     }
 
-    private DamageResult calcDamage(DamageCompareRequest req, BuffBonus buff, double mainStat,
+    private DamageResult calcDamage(DamageCompareRequest req, BuffBonus buff, WeaponType weaponType, double mainStat,
                                     int totalFlatSubStat, int totalFlatAtk, int totalAtkPercent, int totalCritRate,
                                     int totalDmgPercent, int totalBossDmgPercent, int totalAllStatPercent, ItemStatFullDto item) {
-        boolean magicWeapon = req.getWeaponType().isMagicWeapon();
-        int attackPercent = req.getAtkPercent() + totalAtkPercent + item.getAtkPercent();
+        boolean magicWeapon = weaponType.isMagicWeapon();
+        int attackPercent = totalAtkPercent + item.getAtkPercent();
         int flatSubTotal = req.getSubStat() + totalFlatSubStat + item.getFlatSubStat();
         int effectiveAllStatPercent = totalAllStatPercent + item.getAllStatPercent();
         int subStat = (int) Math.floor(flatSubTotal * (1 + effectiveAllStatPercent / 100.0));
@@ -139,11 +138,12 @@ public class DamageCalcService {
             );
             damage = calcMagicDamage(magic);
         } else {
-            int totalAtk = calcTotalAttackValue(
-                    req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.attack(),
-                    attackPercent
-            );
-            damage = calcPhysicalDamage(mainStat, subStat, req.getWeaponType().getConstant(), totalAtk);
+            boolean comparingWeapon = req.getWeaponAtk() == 0 && item.getFlatAtk() > 0;
+            int weaponAtk = comparingWeapon ? item.getFlatAtk() : req.getWeaponAtk();
+            int equipAtk = comparingWeapon ? totalFlatAtk : totalFlatAtk + item.getFlatAtk();
+            int totalAtk = calcTotalAttackValue(weaponAtk, attackPercent)
+                    + equipAtk + buff.attack();
+            damage = calcPhysicalDamage(mainStat, subStat, weaponType.getConstant(), totalAtk);
         }
 
         int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
@@ -160,6 +160,10 @@ public class DamageCalcService {
         double bossExpected   = damage * (1 + bossDmgPercent   / 100.0) * critMultiplier;
 
         return new DamageResult(damage, magic, bossExpected, normalExpected);
+    }
+
+    private WeaponType getItemBWeaponType(DamageCompareRequest req) {
+        return req.getItemBWeaponType() != null ? req.getItemBWeaponType() : req.getWeaponType();
     }
 
     private int calcTotalAttackValue(int baseAttack, int attackPercent) {
