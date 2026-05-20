@@ -5,6 +5,7 @@ import io.github.jaemo_lim.mapleplanet_spring.domain.analytics.dto.AnalyticsSumm
 import io.github.jaemo_lim.mapleplanet_spring.domain.analytics.entity.AnalyticsEvent;
 import io.github.jaemo_lim.mapleplanet_spring.domain.analytics.repository.AnalyticsEventRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AnalyticsService {
 
     private static final ZoneId SERVICE_ZONE = ZoneId.of("Asia/Seoul");
@@ -29,11 +31,16 @@ public class AnalyticsService {
     @Transactional
     public void record(AnalyticsEventRequest request) {
         String path = request.getPath() == null ? null : request.getPath().trim();
+        String visitorId = request.getVisitorId().trim();
         analyticsEventRepository.save(AnalyticsEvent.create(
-                request.getVisitorId().trim(),
+                visitorId,
                 request.getEventType(),
                 path == null || path.isBlank() ? null : path
         ));
+        log.info("analytics event recorded: type={}, visitor={}, path={}",
+                request.getEventType(),
+                maskVisitorId(visitorId),
+                path == null || path.isBlank() ? "-" : path);
     }
 
     @Transactional(readOnly = true)
@@ -50,6 +57,14 @@ public class AnalyticsService {
         long dau = analyticsEventRepository.countDistinctVisitorsBetween(todayStart, tomorrowStart);
         long mau = analyticsEventRepository.countDistinctVisitorsBetween(mauStart, tomorrowStart);
 
+        log.info("analytics summary requested: date={}, dau={}, mau={}", today, dau, mau);
         return new AnalyticsSummaryResponse(today, dau, mau);
+    }
+
+    private String maskVisitorId(String visitorId) {
+        if (visitorId.length() <= 8) {
+            return visitorId;
+        }
+        return visitorId.substring(0, 8) + "...";
     }
 }
