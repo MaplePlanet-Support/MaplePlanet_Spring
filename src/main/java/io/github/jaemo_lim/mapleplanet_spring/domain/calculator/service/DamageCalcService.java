@@ -15,6 +15,8 @@ public class DamageCalcService {
     private static final int MEDITATION_MAX_LEVEL = 20;
     private static final int RAGE_MAX_LEVEL = 20;
     private static final int SHARP_EYES_MAX_LEVEL = 30;
+    private static final int DEFAULT_SKILL_COEFF = 150;
+    private static final int DEFAULT_MAGIC_SKILL_COEFF = 100;
 
     public DamageCalcResponse calculate(DamageCalcRequest req) {
         BuffBonus buff = BuffBonus.from(req);
@@ -30,7 +32,7 @@ public class DamageCalcService {
                     (int) Math.floor(buffedMainStat) + req.getWeaponAtk() + req.getEquipAtk(),
                     req.getAtkPercent()
             ) + buff.magic();
-            damage = calcMagicDamage(totalMagic);
+            damage = calcMagicDamage(totalMagic, buffedMainStat, DEFAULT_MAGIC_SKILL_COEFF);
         } else {
             totalAtk = calcPhysicalTotalAttack(req.getWeaponAtk(), req.getEquipAtk(), buff.attack(), req.getAmmoAtk(), req.getAtkPercent());
             double buffedSubStat = applyMapleWarrior(req.getSubStat(), buff.mapleWarriorPercent());
@@ -132,6 +134,9 @@ public class DamageCalcService {
         int flatSubTotal = req.getSubStat() + totalFlatSubStat + totalFlatAllStat + item.getFlatSubStat() + item.getFlatAllStat();
         int effectiveSubPercent = totalAllStatPercent + totalSubStatPercent + item.getAllStatPercent() + item.getSubStatPercent();
         double subStat = flatSubTotal * (1 + effectiveSubPercent / 100.0) + mapleWarriorSubBonus;
+        int skillCoeff = req.getSkillCoeff() > 0
+                ? req.getSkillCoeff()
+                : (magicWeapon ? DEFAULT_MAGIC_SKILL_COEFF : DEFAULT_SKILL_COEFF);
         double damage;
         double magic = 0;
 
@@ -141,7 +146,7 @@ public class DamageCalcService {
                     (int) Math.floor(mainStat) + req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk(),
                     attackPercent
             ) + buff.magic();
-            damage = calcMagicDamage(magic);
+            damage = calcMagicDamage(magic, mainStat, skillCoeff);
         } else {
             boolean comparingWeapon = req.getWeaponAtk() == 0 && item.getFlatAtk() > 0;
             int weaponAtk = comparingWeapon ? item.getFlatAtk() : req.getWeaponAtk();
@@ -152,7 +157,6 @@ public class DamageCalcService {
 
         int critRate = clamp(req.getCritRate() + totalCritRate + item.getCritRateBonus() + buff.critRate(), 0, 100);
         int critDmgPP = req.getCritDmgPP() + buff.critDmgPP(); // ?덈?媛?%p)
-        int skillCoeff = req.getSkillCoeff() > 0 ? req.getSkillCoeff() : 150;
         int normalDmgPercent = totalDmgPercent + item.getTotalDmgPercent();
         int bossDmgPercent   = normalDmgPercent + totalBossDmgPercent + item.getBossDmgPercent();
         // ?щ컮瑜?怨듭떇: 1 + ?щ━??횞 ?щ━蹂대꼫?ㅼ젅?媛?/ ?ㅽ궗怨꾩닔
@@ -205,14 +209,33 @@ public class DamageCalcService {
         double totalDmgPct1ToMainStat;
 
         if (magicWeapon) {
-            int magicBaseWithoutBuff = (int) Math.floor(currentMainStat) + req.getWeaponAtk() + totalEquipAtk;
-            totalAttack = calcTotalAttackValue(magicBaseWithoutBuff, totalAtkPercent) + buff.magic();
+            MagicStatContext magicContext = new MagicStatContext(
+                    flatMainSum,
+                    mainStatMultiplier,
+                    mapleWarriorBonus,
+                    req.getWeaponAtk(),
+                    totalEquipAtk,
+                    totalAtkPercent,
+                    buff.magic(),
+                    DEFAULT_MAGIC_SKILL_COEFF
+            );
+            int magicBaseWithoutBuff = calcMagicBaseWithoutBuff(magicContext, 0);
+            totalAttack = (int) Math.floor(calcTotalMagicValue(magicBaseWithoutBuff, totalAtkPercent) + buff.magic());
             atkPct1 = magicBaseWithoutBuff / 100.0;
-            double magicMultiplier = 1 + totalAtkPercent / 100.0;
-            flatAtk1ToMainStat = 1.0;
-            atkPct1ToMainStat = atkPct1 / magicMultiplier;
-            bossDmgPct1ToMainStat = totalAttack / ((100.0 + totalDmgPct + totalBossDmgPct) * magicMultiplier);
-            totalDmgPct1ToMainStat = totalAttack / ((100.0 + totalDmgPct) * magicMultiplier);
+
+            double statPctTargetDamage = calcMagicDamage(magicContext.withMainStatMultiplier(mainStatMultiplier + 0.01), 0);
+            double atkPctTargetDamage = calcMagicDamage(magicContext.withMagicPercent(totalAtkPercent + 1), 0);
+            double flatAtkTargetDamage = calcMagicDamage(magicContext.withEquipMagic(totalEquipAtk + 1), 0);
+
+            statPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, statPctTargetDamage, 0);
+            allStatPct1ToMainStat = statPct1ToMainStat;
+            atkPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, atkPctTargetDamage, 0);
+            flatAtk1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, flatAtkTargetDamage, 0);
+
+            double bossDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + totalBossDmgPct + 1);
+            double totalDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + 1);
+            bossDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, bossDmgTarget, totalDmgPct + totalBossDmgPct);
+            totalDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, totalDmgTarget, totalDmgPct);
         } else {
             totalAttack = calcPhysicalTotalAttack(req.getWeaponAtk(), totalEquipAtk, buff.attack(), req.getAmmoAtk(), totalAtkPercent);
             atkPct1 = req.getWeaponAtk() / 100.0;
@@ -257,9 +280,57 @@ public class DamageCalcService {
         return Math.floor((Math.floor(mainStat) * weaponConst + Math.floor(subStat)) * totalAtk / 100.0);
     }
 
-    private double calcMagicDamage(double totalMagic) {
+    private double calcMagicDamage(double totalMagic, double intStat, int skillCoeff) {
         // 珥앸쭏?μ뿉 INT媛 ?ы븿???댄썑 怨듭떇 - ?꾩슂???섏젙
-        return totalMagic;
+        int finalInt = (int) Math.floor(intStat);
+        double baseDamage = ((totalMagic * totalMagic / 1000.0 + totalMagic) / 30.0)
+                + finalInt / 200.0;
+        return baseDamage * skillCoeff;
+    }
+
+    private int calcMagicBaseWithoutBuff(MagicStatContext context, double rawFlatStatBonus) {
+        double mainStat = calcMagicMainStat(context, rawFlatStatBonus);
+        return (int) Math.floor(mainStat) + context.weaponMagic() + context.equipMagic();
+    }
+
+    private double calcMagicMainStat(MagicStatContext context, double rawFlatStatBonus) {
+        return (context.flatMainSum() + rawFlatStatBonus) * context.mainStatMultiplier()
+                + context.mapleWarriorBonus();
+    }
+
+    private double calcMagicDamage(MagicStatContext context, double rawFlatStatBonus) {
+        double mainStat = calcMagicMainStat(context, rawFlatStatBonus);
+        int magicBaseWithoutBuff = (int) Math.floor(mainStat) + context.weaponMagic() + context.equipMagic();
+        double totalMagic = calcTotalMagicValue(magicBaseWithoutBuff, context.magicPercent()) + context.buffMagic();
+        return calcMagicDamage(totalMagic, mainStat, context.skillCoeff());
+    }
+
+    private double calcMagicExpectedDamage(MagicStatContext context, double rawFlatStatBonus, int damagePercent) {
+        return calcMagicDamage(context, rawFlatStatBonus) * (1 + damagePercent / 100.0);
+    }
+
+    private double findMagicFinalMainStatEquivalent(MagicStatContext context, double targetExpectedDamage, int damagePercent) {
+        double currentExpectedDamage = calcMagicExpectedDamage(context, 0, damagePercent);
+        if (targetExpectedDamage <= currentExpectedDamage) {
+            return 0;
+        }
+
+        double low = 0;
+        double high = 1;
+        while (calcMagicExpectedDamage(context, high, damagePercent) < targetExpectedDamage && high < 1_000_000) {
+            high *= 2;
+        }
+
+        for (int i = 0; i < 60; i++) {
+            double mid = (low + high) / 2.0;
+            if (calcMagicExpectedDamage(context, mid, damagePercent) < targetExpectedDamage) {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+
+        return high * context.mainStatMultiplier();
     }
 
     private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
@@ -293,6 +364,29 @@ public class DamageCalcService {
     }
 
     private record DamageResult(double damage, double magic, double expectedDamage, double normalExpectedDamage) {
+    }
+
+    private record MagicStatContext(
+            double flatMainSum,
+            double mainStatMultiplier,
+            double mapleWarriorBonus,
+            int weaponMagic,
+            int equipMagic,
+            int magicPercent,
+            int buffMagic,
+            int skillCoeff
+    ) {
+        private MagicStatContext withMainStatMultiplier(double value) {
+            return new MagicStatContext(flatMainSum, value, mapleWarriorBonus, weaponMagic, equipMagic, magicPercent, buffMagic, skillCoeff);
+        }
+
+        private MagicStatContext withEquipMagic(int value) {
+            return new MagicStatContext(flatMainSum, mainStatMultiplier, mapleWarriorBonus, weaponMagic, value, magicPercent, buffMagic, skillCoeff);
+        }
+
+        private MagicStatContext withMagicPercent(int value) {
+            return new MagicStatContext(flatMainSum, mainStatMultiplier, mapleWarriorBonus, weaponMagic, equipMagic, value, buffMagic, skillCoeff);
+        }
     }
 
     private record BuffBonus(
