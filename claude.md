@@ -70,26 +70,22 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ### 개요
 메이플 플래닛(사설 서버) 유저를 위한 스펙업 유틸리티 사이트.
-비로그인 기반. 주요 기능: 주스탯 환산기, 강화 시뮬레이터(혼돈의 주문서 / 큐브 / 메이커).
+비로그인 기반. 주요 기능: 아이템 비교, 스공/데미지 비교, 프리셋 저장.
 
 ### 기술 스택
 - **언어/프레임워크:** Java 21, Spring Boot 3.5.x
 - **ORM:** Spring Data JPA (Hibernate)
 - **DB:** MySQL (운영) / H2 (로컬 개발)
-- **캐시:** Spring Cache + Caffeine (확률 테이블 캐싱)
-- **API 문서:** SpringDoc OpenAPI (Swagger UI `/swagger-ui/index.html`)
+- **캐시/제한:** Caffeine 기반 API rate limit
 - **빌드:** Gradle (Groovy DSL)
 - **기본 패키지:** `io.github.jaemo_lim.mapleplanet_spring`
 
 ### 패키지 구조
 ```
 src/main/java/io/github/jaemo_lim/mapleplanet_spring/
-├── domain/          # 도메인별 패키지 (entity, repository, service, controller)
-│   ├── job/
-│   ├── item/
-│   ├── calculator/  # 주스탯 환산기
-│   ├── simulator/   # 강화 시뮬레이터 (scroll, cube, maker)
-│   └── simulation/  # 시뮬레이션 결과 저장/공유
+├── domain/
+│   ├── calculator/  # 스탯/스공/데미지 계산 API
+│   └── preset/      # 프리셋 저장/불러오기 API
 ├── global/          # 공통 (exception, response, config)
 └── MaplePlanetSpringApplication.java
 ```
@@ -122,8 +118,7 @@ src/main/java/io/github/jaemo_lim/mapleplanet_spring/
 | 마법사 | INT | LUK | MATK |
 
 ### 비로그인 사용자 처리
-- 브라우저 최초 방문 시 프론트에서 UUID 생성 → `localStorage`에 저장 (`session_key`)
-- 시뮬레이션 결과 공유 시 별도 `share_key` (UUID) 발급 → `/share/{share_key}`
+- 닉네임과 선택 비밀번호 기반 프리셋 저장/불러오기
 
 ### 빌드 / 실행
 ```bash
