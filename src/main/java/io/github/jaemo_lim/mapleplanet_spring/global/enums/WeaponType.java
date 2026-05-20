@@ -18,7 +18,7 @@ public enum WeaponType {
     BOW("활", 3.4),
     CROSSBOW("석궁", 3.6),
     DAGGER("단검", 3.6),
-    CLAW("아대", 3.8),
+    CLAW("아대", 3.6),
     KNUCKLE("너클", 4.8),
     GUN("건", 3.6),
     WAND("완드", 0.0),
