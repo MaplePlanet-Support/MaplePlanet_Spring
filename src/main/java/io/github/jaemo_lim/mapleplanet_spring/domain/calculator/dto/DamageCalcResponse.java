@@ -15,6 +15,6 @@ public class DamageCalcResponse {
     private int critRate;           // 버프 반영 크리티컬 확률
     private int critDmgPP;          // 버프 반영 크리티컬 추가 퍼뎀
     private int totalAtk;           // 총공격력
-    private int totalMagic;         // 총마력
+    private double totalMagic;      // 총마력
     private double damage;          // 스공
 }

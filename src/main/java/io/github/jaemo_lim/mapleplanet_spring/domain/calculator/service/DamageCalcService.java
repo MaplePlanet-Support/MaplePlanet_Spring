@@ -21,12 +21,12 @@ public class DamageCalcService {
         boolean magicWeapon = req.getWeaponType().isMagicWeapon();
         double buffedMainStat = applyMapleWarrior(req.getMainStat(), buff.mapleWarriorPercent());
         int totalAtk = 0;
-        int totalMagic = 0;
+        double totalMagic = 0;
         double damage;
 
         if (magicWeapon) {
 
-            totalMagic = calcTotalAttackValue(
+            totalMagic = calcTotalMagicValue(
                     (int) Math.floor(buffedMainStat) + req.getWeaponAtk() + req.getEquipAtk() + buff.magic(),
                     req.getAtkPercent()
             );
@@ -135,7 +135,7 @@ public class DamageCalcService {
 
         if (magicWeapon) {
             // 珥앸쭏??= (二쇱뒪??+ 臾닿린留덈젰 + ?λ퉬留덈젰 + 踰꾪봽留덈젰) 횞 (1 + 留덈젰%)
-            magic = calcTotalAttackValue(
+            magic = calcTotalMagicValue(
                     (int) Math.floor(mainStat) + req.getWeaponAtk() + totalFlatAtk + item.getFlatAtk() + buff.magic(),
                     attackPercent
             );
@@ -239,6 +239,10 @@ public class DamageCalcService {
         return (int) Math.floor(baseAttack * (1 + attackPercent / 100.0));
     }
 
+    private double calcTotalMagicValue(int baseMagic, int magicPercent) {
+        return baseMagic * (1 + magicPercent / 100.0);
+    }
+
     private int calcPhysicalTotalAttack(int weaponAtk, int equipAtk, int buffAtk, int ammoAtk, int attackPercent) {
         return calcTotalAttackValue(weaponAtk, attackPercent) + equipAtk + buffAtk + ammoAtk;
     }
@@ -249,7 +253,7 @@ public class DamageCalcService {
 
     private double calcMagicDamage(double totalMagic) {
         // 珥앸쭏?μ뿉 INT媛 ?ы븿???댄썑 怨듭떇 - ?꾩슂???섏젙
-        return Math.floor(totalMagic);
+        return totalMagic;
     }
 
     private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
