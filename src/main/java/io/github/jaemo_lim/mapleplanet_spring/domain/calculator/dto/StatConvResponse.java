@@ -10,5 +10,6 @@ public record StatConvResponse(
         double currentMainStat,
         int finalSubStat,
         int totalAttack,
-        double atkPct1
+        double atkPct1,
+        double mainStatMultiplier
 ) {}

@@ -188,8 +188,9 @@ public class DamageCalcService {
         int flatSubSum = req.getSubStat() + totalFlatSubStat + totalFlatAllStat;
         int totalMainPct = totalStatPct + totalAllStatPct;
         int totalSubPct = totalSubStatPct + totalAllStatPct;
+        double mainStatMultiplier = 1 + totalMainPct / 100.0;
 
-        double currentMainStat = flatMainSum * (1 + totalMainPct / 100.0) + mapleWarriorBonus;
+        double currentMainStat = flatMainSum * mainStatMultiplier + mapleWarriorBonus;
         int finalSubStat = (int) Math.floor(flatSubSum * (1 + totalSubPct / 100.0) + mapleWarriorSubBonus);
         double statPct1ToMainStat = flatMainSum / 100.0;
         double allStatPct1ToMainStat = magicWeapon
@@ -223,16 +224,17 @@ public class DamageCalcService {
         }
 
         return new StatConvResponse(
-                round2(statPct1ToMainStat),
-                round2(allStatPct1ToMainStat),
-                round2(atkPct1ToMainStat),
-                round2(flatAtk1ToMainStat),
-                round2(bossDmgPct1ToMainStat),
-                round2(totalDmgPct1ToMainStat),
+                round2(statPct1ToMainStat / mainStatMultiplier),
+                round2(allStatPct1ToMainStat / mainStatMultiplier),
+                round2(atkPct1ToMainStat / mainStatMultiplier),
+                round2(flatAtk1ToMainStat / mainStatMultiplier),
+                round2(bossDmgPct1ToMainStat / mainStatMultiplier),
+                round2(totalDmgPct1ToMainStat / mainStatMultiplier),
                 round2(currentMainStat),
                 finalSubStat,
                 totalAttack,
-                round2(atkPct1)
+                round2(atkPct1),
+                round2(mainStatMultiplier)
         );
     }
     private WeaponType getItemBWeaponType(DamageCompareRequest req) {
