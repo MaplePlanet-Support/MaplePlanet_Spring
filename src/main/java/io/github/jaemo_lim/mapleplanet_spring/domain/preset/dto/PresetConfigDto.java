@@ -27,6 +27,7 @@ public class PresetConfigDto {
     private int critRate;
     private int critDmgPP;
     private int skillCoeff;
+    private int amplificationLevel;
     private int blessingLevel;
     private int empressBlessingLevel;
     private int mapleWarriorLevel;
