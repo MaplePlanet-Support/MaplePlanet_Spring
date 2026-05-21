@@ -224,13 +224,10 @@ public class DamageCalcService {
             atkPct1 = magicBaseWithoutBuff / 100.0;
 
             double statPctTargetDamage = calcMagicDamage(magicContext.withMainStatMultiplier(mainStatMultiplier + 0.01), 0);
-            double atkPctTargetDamage = calcMagicDamage(magicContext.withMagicPercent(totalAtkPercent + 1), 0);
-            double flatAtkTargetDamage = calcMagicDamage(magicContext.withEquipMagic(totalEquipAtk + 1), 0);
-
             statPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, statPctTargetDamage, 0);
             allStatPct1ToMainStat = statPct1ToMainStat;
-            atkPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, atkPctTargetDamage, 0);
-            flatAtk1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, flatAtkTargetDamage, 0);
+            flatAtk1ToMainStat = 1;
+            atkPct1ToMainStat = atkPct1 * flatAtk1ToMainStat;
 
             double bossDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + totalBossDmgPct + 1);
             double totalDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + 1);
