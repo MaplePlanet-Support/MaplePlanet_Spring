@@ -19,7 +19,7 @@ class DamageCalcServiceTest {
     private final DamageCalcService service = new DamageCalcService();
 
     @Test
-    void physicalDamageUsesFractionalStatsUntilFinalFloor() {
+    void physicalDamageUsesDisplayedIntegerStats() {
         DamageCompareRequest request = new DamageCompareRequest();
         ReflectionTestUtils.setField(request, "baseStat", 101);
         ReflectionTestUtils.setField(request, "subStat", 53);
@@ -33,7 +33,7 @@ class DamageCalcServiceTest {
         DamageCompareResponse response = service.compare(request);
 
         assertThat(response.getStatWithItemA()).isCloseTo(111.1, offset(0.000001));
-        assertThat(response.getDamageWithItemA()).isEqualTo(569);
+        assertThat(response.getDamageWithItemA()).isEqualTo(568);
     }
 
     @Test

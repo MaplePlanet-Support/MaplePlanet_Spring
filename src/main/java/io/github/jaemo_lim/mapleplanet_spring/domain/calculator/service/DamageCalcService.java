@@ -277,7 +277,9 @@ public class DamageCalcService {
     }
 
     private double calcPhysicalDamage(double mainStat, double subStat, double weaponConst, int totalAtk) {
-        return Math.floor((mainStat * weaponConst + subStat) * totalAtk / 100.0);
+        int finalMainStat = (int) Math.floor(mainStat);
+        int finalSubStat = (int) Math.floor(subStat);
+        return Math.floor((finalMainStat * weaponConst + finalSubStat) * totalAtk / 100.0);
     }
 
     private double calcMagicDamage(double totalMagic, double intStat, int skillCoeff) {
