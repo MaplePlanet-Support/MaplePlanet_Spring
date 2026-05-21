@@ -59,6 +59,12 @@ class DamageCalcServiceTest {
         assertThat(WeaponType.CLAW.getConstant()).isEqualTo(3.6);
     }
 
+    @Test
+    void archerWeaponConstantsUseMaplePlanetValues() {
+        assertThat(WeaponType.BOW.getConstant()).isEqualTo(3.8);
+        assertThat(WeaponType.CROSSBOW.getConstant()).isEqualTo(4.0);
+    }
+
     private static ItemStatFullDto item(int flatStat, int flatSubStat, int statPercent, int subStatPercent) {
         ItemStatFullDto item = new ItemStatFullDto();
         ReflectionTestUtils.setField(item, "flatStat", flatStat);
