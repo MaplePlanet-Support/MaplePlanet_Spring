@@ -70,6 +70,18 @@ public class CharacterPresetService {
         return new PresetLoadResponse(preset.getNickname(), config);
     }
 
+    @Transactional(readOnly = true)
+    public String verifiedConfigJson(String nickname, String password) {
+        CharacterPreset preset = presetRepository.findByNickname(nickname)
+                .orElseThrow(() -> new RuntimeException("해당 닉네임을 찾을 수 없습니다."));
+
+        if (preset.hasPassword() && !preset.passwordMatches(hashPassword(password))) {
+            throw new RuntimeException("비밀번호가 틀렸습니다.");
+        }
+
+        return preset.getConfigJson();
+    }
+
     private String toJson(PresetConfigDto config) {
         try {
             return objectMapper.writeValueAsString(config);

@@ -3,6 +3,7 @@ package io.github.jaemo_lim.mapleplanet_spring.global.exception;
 import io.github.jaemo_lim.mapleplanet_spring.global.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -20,6 +21,13 @@ public class GlobalExceptionHandler {
                 .map(fe -> new ErrorResponse.FieldError(fe.getField(), fe.getDefaultMessage()))
                 .toList();
         return ErrorResponse.of("Invalid request.", errors);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException e) {
+        String message = e.getReason() == null ? "Request failed." : e.getReason();
+        return ResponseEntity.status(e.getStatusCode())
+                .body(ErrorResponse.of(message));
     }
 
     @ExceptionHandler(RuntimeException.class)

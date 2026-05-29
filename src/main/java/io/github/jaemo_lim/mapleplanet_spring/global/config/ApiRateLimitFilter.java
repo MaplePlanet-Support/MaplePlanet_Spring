@@ -36,6 +36,9 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     @Value("${app.max-request-bytes:65536}")
     private long maxRequestBytes;
 
+    @Value("${app.max-contact-request-bytes:10485760}")
+    private long maxContactRequestBytes;
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !request.getRequestURI().startsWith("/api/");
@@ -44,7 +47,10 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        if (request.getContentLengthLong() > maxRequestBytes) {
+        long requestLimit = request.getRequestURI().startsWith("/api/v1/contact/posts")
+                ? maxContactRequestBytes
+                : maxRequestBytes;
+        if (request.getContentLengthLong() > requestLimit) {
             writeError(response, HttpStatus.PAYLOAD_TOO_LARGE, "Request body is too large.");
             return;
         }
