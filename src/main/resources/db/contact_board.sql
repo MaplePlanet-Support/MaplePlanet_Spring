@@ -9,6 +9,8 @@ CREATE TABLE contact_post (
     preset_nickname VARCHAR(30),
     preset_config_json TEXT,
     created_at DATETIME(6) NOT NULL,
+    answer_content TEXT,
+    answered_at DATETIME(6),
     PRIMARY KEY (id),
     INDEX idx_contact_post_created_at (created_at)
 );

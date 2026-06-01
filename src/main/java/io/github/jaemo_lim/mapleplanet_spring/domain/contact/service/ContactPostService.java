@@ -118,6 +118,16 @@ public class ContactPostService {
         return ContactPostDetailResponse.from(post, attachments);
     }
 
+    @Transactional
+    public ContactPostDetailResponse answer(Long id, String providedKey, String answerContent) {
+        validateAdmin(providedKey);
+        ContactPost post = postRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact post not found."));
+        post.answer(requireText(answerContent, "답변", MAX_CONTENT_LENGTH));
+        List<ContactAttachment> attachments = attachmentRepository.findByPostIdOrderByIdAsc(id);
+        return ContactPostDetailResponse.from(post, attachments);
+    }
+
     @Transactional(readOnly = true)
     public List<ContactPostSummaryResponse> publicList() {
         return postRepository.findTop100ByOrderByCreatedAtDesc().stream()

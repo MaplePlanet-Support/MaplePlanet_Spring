@@ -53,6 +53,12 @@ public class ContactPost {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String answerContent;
+
+    private LocalDateTime answeredAt;
+
     public static ContactPost create(
             String title,
             String content,
@@ -75,6 +81,11 @@ public class ContactPost {
 
     public boolean authorMatches(String nickname, String authorCodeHash) {
         return this.nickname.equals(nickname) && this.authorCodeHash != null && this.authorCodeHash.equals(authorCodeHash);
+    }
+
+    public void answer(String answerContent) {
+        this.answerContent = answerContent;
+        this.answeredAt = LocalDateTime.now();
     }
 
     @PrePersist

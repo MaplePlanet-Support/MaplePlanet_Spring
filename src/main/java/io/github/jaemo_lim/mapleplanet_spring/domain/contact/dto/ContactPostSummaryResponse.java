@@ -15,6 +15,7 @@ public class ContactPostSummaryResponse {
     private boolean secret;
     private boolean presetAttached;
     private boolean readable;
+    private boolean answered;
     private LocalDateTime createdAt;
 
     public static ContactPostSummaryResponse from(ContactPost post) {
@@ -25,6 +26,7 @@ public class ContactPostSummaryResponse {
                 post.isSecret(),
                 post.isPresetAttached(),
                 !post.isSecret(),
+                post.getAnsweredAt() != null,
                 post.getCreatedAt()
         );
     }

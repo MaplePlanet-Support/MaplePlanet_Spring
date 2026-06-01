@@ -229,18 +229,20 @@ public class DamageCalcService {
             flatAtk1ToMainStat = 1;
             atkPct1ToMainStat = atkPct1 * flatAtk1ToMainStat;
 
-            double bossDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + totalBossDmgPct + 1);
-            double totalDmgTarget = calcMagicExpectedDamage(magicContext, 0, totalDmgPct + 1);
-            bossDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, bossDmgTarget, totalDmgPct + totalBossDmgPct);
-            totalDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, totalDmgTarget, totalDmgPct);
+            int bossDamagePercent = totalDmgPct + totalBossDmgPct;
+            double bossDmgTarget = calcMagicExpectedDamage(magicContext, 0, bossDamagePercent + 1);
+            double totalDmgTarget = calcMagicExpectedDamage(magicContext, 0, bossDamagePercent + 1);
+            bossDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, bossDmgTarget, bossDamagePercent);
+            totalDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, totalDmgTarget, bossDamagePercent);
         } else {
             totalAttack = calcPhysicalTotalAttack(req.getWeaponAtk(), totalEquipAtk, buff.attack(), req.getAmmoAtk(), totalAtkPercent);
             atkPct1 = req.getWeaponAtk() / 100.0;
             double damageStat = currentMainStat + finalSubStat / req.getWeaponType().getConstant();
             flatAtk1ToMainStat = totalAttack == 0 ? 0 : damageStat / totalAttack;
             atkPct1ToMainStat = atkPct1 * flatAtk1ToMainStat;
-            bossDmgPct1ToMainStat = damageStat / (100.0 + totalDmgPct + totalBossDmgPct);
-            totalDmgPct1ToMainStat = damageStat / (100.0 + totalDmgPct);
+            double bossDamagePercent = totalDmgPct + totalBossDmgPct;
+            bossDmgPct1ToMainStat = damageStat / (100.0 + bossDamagePercent);
+            totalDmgPct1ToMainStat = damageStat / (100.0 + bossDamagePercent);
         }
 
         return new StatConvResponse(
@@ -452,10 +454,13 @@ public class DamageCalcService {
                     + rageAttack(clamp(rageLevel, 0, RAGE_MAX_LEVEL))
                     + (babyDragonFood ? 7 : 0)
                     + (hontaleVictory ? 30 : 0);
+            int magicBuff = Math.max(
+                    clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL),
+                    hontaleVictory ? 40 : 0
+            );
             int magic = spirit * 2
                     + empress * 2
-                    + clamp(meditationLevel, 0, MEDITATION_MAX_LEVEL)
-                    + (hontaleVictory ? 40 : 0);
+                    + magicBuff;
             // ??0 = +140%p ?덈?媛?(?⑹뿰??, ?좏삎 蹂닿컙
             int critRate = sharpEyes == 0 ? 0 : (int) Math.floor((sharpEyes + 1) / 2.0);
             int critDmgPP = sharpEyes == 0 ? 0 : (int) Math.round(sharpEyes * 140.0 / 30.0);

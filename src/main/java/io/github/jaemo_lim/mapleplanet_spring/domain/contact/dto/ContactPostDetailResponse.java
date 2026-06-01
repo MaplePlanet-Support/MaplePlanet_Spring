@@ -20,6 +20,8 @@ public class ContactPostDetailResponse {
     private String presetNickname;
     private String presetConfigJson;
     private LocalDateTime createdAt;
+    private String answerContent;
+    private LocalDateTime answeredAt;
     private List<ContactAttachmentResponse> attachments;
 
     public static ContactPostDetailResponse from(ContactPost post, List<ContactAttachment> attachments) {
@@ -33,6 +35,8 @@ public class ContactPostDetailResponse {
                 post.getPresetNickname(),
                 post.getPresetConfigJson(),
                 post.getCreatedAt(),
+                post.getAnswerContent(),
+                post.getAnsweredAt(),
                 attachments.stream().map(ContactAttachmentResponse::from).toList()
         );
     }

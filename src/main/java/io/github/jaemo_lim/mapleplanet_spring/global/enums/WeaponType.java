@@ -16,7 +16,7 @@ public enum WeaponType {
     SPEAR("창", 5.0),
     POLEARM("폴암", 5.0),
     BOW("활", 3.8),
-    CROSSBOW("석궁", 4.0),
+    CROSSBOW("석궁", 3.6),
     DAGGER("단검", 3.6),
     CLAW("아대", 3.6),
     KNUCKLE("너클", 4.8),

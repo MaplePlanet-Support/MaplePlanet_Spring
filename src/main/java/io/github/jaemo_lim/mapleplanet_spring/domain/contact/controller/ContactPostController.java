@@ -1,8 +1,10 @@
 package io.github.jaemo_lim.mapleplanet_spring.domain.contact.controller;
 
+import io.github.jaemo_lim.mapleplanet_spring.domain.contact.dto.ContactPostAnswerRequest;
 import io.github.jaemo_lim.mapleplanet_spring.domain.contact.dto.ContactPostCreateResponse;
 import io.github.jaemo_lim.mapleplanet_spring.domain.contact.dto.ContactPostDetailResponse;
 import io.github.jaemo_lim.mapleplanet_spring.domain.contact.dto.ContactPostSummaryResponse;
+import jakarta.validation.Valid;
 import io.github.jaemo_lim.mapleplanet_spring.domain.contact.service.ContactPostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -78,6 +81,15 @@ public class ContactPostController {
             @RequestHeader(value = "X-Analytics-Key", required = false) String adminKey
     ) {
         return contactPostService.adminDetail(id, adminKey);
+    }
+
+    @PostMapping("/admin/posts/{id}/answer")
+    public ContactPostDetailResponse answer(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Analytics-Key", required = false) String adminKey,
+            @Valid @RequestBody ContactPostAnswerRequest request
+    ) {
+        return contactPostService.answer(id, adminKey, request.getAnswerContent());
     }
 
     @GetMapping("/admin/attachments/{id}")
