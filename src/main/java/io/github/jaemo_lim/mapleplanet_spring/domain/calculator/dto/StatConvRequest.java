@@ -41,12 +41,26 @@ public class StatConvRequest {
     @Min(0)
     private int rageLevel;
 
+    @Min(0)
+    private int sharpEyesLevel;
+
+    private boolean decentSharpEyes;
+
     private boolean babyDragonFood;
 
     private boolean hontaleVictory;
 
     @Min(0)
     private int ammoAtk;
+
+    @Min(0)
+    private int critRate;
+
+    @Min(0)
+    private int critDmgPP;
+
+    @Min(0)
+    private int skillCoeff;
 
     @Valid
     @Size(max = 32)

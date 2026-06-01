@@ -119,6 +119,23 @@ class DamageCalcServiceTest {
         assertThat(response.totalDmgPct1ToMainStat()).isEqualTo(response.bossDmgPct1ToMainStat());
     }
 
+    @Test
+    void statConversionIncludesCritRateValueUntilCritCap() {
+        StatConvRequest request = statConvRequest(WeaponType.DAGGER);
+        ReflectionTestUtils.setField(request, "critRate", 50);
+        ReflectionTestUtils.setField(request, "critDmgPP", 100);
+        ReflectionTestUtils.setField(request, "skillCoeff", 150);
+
+        StatConvResponse response = service.statConv(request);
+
+        assertThat(response.critRate1ToMainStat()).isGreaterThan(0);
+
+        ReflectionTestUtils.setField(request, "critRate", 100);
+        StatConvResponse capped = service.statConv(request);
+
+        assertThat(capped.critRate1ToMainStat()).isZero();
+    }
+
     private static ItemStatFullDto item(int flatStat, int flatSubStat, int statPercent, int subStatPercent) {
         ItemStatFullDto item = new ItemStatFullDto();
         ReflectionTestUtils.setField(item, "flatStat", flatStat);

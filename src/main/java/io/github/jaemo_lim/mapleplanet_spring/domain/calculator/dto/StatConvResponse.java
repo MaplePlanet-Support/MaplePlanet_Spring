@@ -5,6 +5,7 @@ public record StatConvResponse(
         double allStatPct1ToMainStat,
         double atkPct1ToMainStat,
         double flatAtk1ToMainStat,
+        double critRate1ToMainStat,
         double bossDmgPct1ToMainStat,
         double totalDmgPct1ToMainStat,
         double currentMainStat,

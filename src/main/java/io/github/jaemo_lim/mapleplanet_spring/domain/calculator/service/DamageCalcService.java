@@ -161,9 +161,7 @@ public class DamageCalcService {
         int bossDmgPercent   = normalDmgPercent + totalBossDmgPercent + item.getBossDmgPercent();
         // ?щ컮瑜?怨듭떇: 1 + ?щ━??횞 ?щ━蹂대꼫?ㅼ젅?媛?/ ?ㅽ궗怨꾩닔
         // ?? SE30(140%p) + ?뚯썙?ㅽ듃?쇱씠??260%p): ?щ━諛곗쑉 = (260+140)/260 = 1.538
-        double critMultiplier = critRate > 0
-                ? 1 + (critRate / 100.0) * (critDmgPP / (double) skillCoeff)
-                : 1.0;
+        double critMultiplier = critMultiplier(critRate, critDmgPP, skillCoeff);
         double normalExpected = damage * (1 + normalDmgPercent / 100.0) * critMultiplier;
         double bossExpected   = damage * (1 + bossDmgPercent   / 100.0) * critMultiplier;
 
@@ -185,6 +183,7 @@ public class DamageCalcService {
         int totalEquipAtk = sum(req.getEquippedItems(), "atk");
         int totalBossDmgPct = sum(req.getEquippedItems(), "bossDmg");
         int totalDmgPct = sum(req.getEquippedItems(), "totalDmg");
+        int totalCritRate = sum(req.getEquippedItems(), "critRate");
 
         double mapleWarriorBonus = Math.floor(req.getBaseStat() * buff.mapleWarriorPercent() / 100.0);
         double mapleWarriorSubBonus = Math.floor(req.getSubStat() * buff.mapleWarriorPercent() / 100.0);
@@ -205,8 +204,18 @@ public class DamageCalcService {
         double atkPct1;
         double flatAtk1ToMainStat;
         double atkPct1ToMainStat;
+        double critRate1ToMainStat;
         double bossDmgPct1ToMainStat;
         double totalDmgPct1ToMainStat;
+        int skillCoeff = req.getSkillCoeff() > 0
+                ? req.getSkillCoeff()
+                : (magicWeapon ? DEFAULT_MAGIC_SKILL_COEFF : DEFAULT_SKILL_COEFF);
+        int finalCritRate = clamp(req.getCritRate() + totalCritRate + buff.critRate(), 0, 100);
+        int finalCritDmgPP = req.getCritDmgPP() + buff.critDmgPP();
+        double critMultiplier = critMultiplier(finalCritRate, finalCritDmgPP, skillCoeff);
+        double critRate1Multiplier = finalCritRate >= 100
+                ? critMultiplier
+                : critMultiplier(finalCritRate + 1, finalCritDmgPP, skillCoeff);
 
         if (magicWeapon) {
             MagicStatContext magicContext = new MagicStatContext(
@@ -217,7 +226,7 @@ public class DamageCalcService {
                     totalEquipAtk,
                     totalAtkPercent,
                     buff.magic(),
-                    DEFAULT_MAGIC_SKILL_COEFF
+                    skillCoeff
             );
             int magicBaseWithoutBuff = calcMagicBaseWithoutBuff(magicContext, 0);
             totalAttack = (int) Math.floor(calcTotalMagicValue(magicBaseWithoutBuff, totalAtkPercent) + buff.magic());
@@ -234,6 +243,8 @@ public class DamageCalcService {
             double totalDmgTarget = calcMagicExpectedDamage(magicContext, 0, bossDamagePercent + 1);
             bossDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, bossDmgTarget, bossDamagePercent);
             totalDmgPct1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, totalDmgTarget, bossDamagePercent);
+            double critRateTarget = calcMagicDamage(magicContext, 0) * critRate1Multiplier;
+            critRate1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, critRateTarget, 0, critMultiplier);
         } else {
             totalAttack = calcPhysicalTotalAttack(req.getWeaponAtk(), totalEquipAtk, buff.attack(), req.getAmmoAtk(), totalAtkPercent);
             atkPct1 = req.getWeaponAtk() / 100.0;
@@ -243,6 +254,7 @@ public class DamageCalcService {
             double bossDamagePercent = totalDmgPct + totalBossDmgPct;
             bossDmgPct1ToMainStat = damageStat / (100.0 + bossDamagePercent);
             totalDmgPct1ToMainStat = damageStat / (100.0 + bossDamagePercent);
+            critRate1ToMainStat = damageStat * (critRate1Multiplier / critMultiplier - 1);
         }
 
         return new StatConvResponse(
@@ -250,6 +262,7 @@ public class DamageCalcService {
                 round2(allStatPct1ToMainStat / mainStatMultiplier),
                 round2(atkPct1ToMainStat / mainStatMultiplier),
                 round2(flatAtk1ToMainStat / mainStatMultiplier),
+                round2(critRate1ToMainStat / mainStatMultiplier),
                 round2(bossDmgPct1ToMainStat / mainStatMultiplier),
                 round2(totalDmgPct1ToMainStat / mainStatMultiplier),
                 round2(currentMainStat),
@@ -310,21 +323,29 @@ public class DamageCalcService {
         return calcMagicDamage(context, rawFlatStatBonus) * (1 + damagePercent / 100.0);
     }
 
+    private double calcMagicExpectedDamage(MagicStatContext context, double rawFlatStatBonus, int damagePercent, double multiplier) {
+        return calcMagicExpectedDamage(context, rawFlatStatBonus, damagePercent) * multiplier;
+    }
+
     private double findMagicFinalMainStatEquivalent(MagicStatContext context, double targetExpectedDamage, int damagePercent) {
-        double currentExpectedDamage = calcMagicExpectedDamage(context, 0, damagePercent);
+        return findMagicFinalMainStatEquivalent(context, targetExpectedDamage, damagePercent, 1.0);
+    }
+
+    private double findMagicFinalMainStatEquivalent(MagicStatContext context, double targetExpectedDamage, int damagePercent, double multiplier) {
+        double currentExpectedDamage = calcMagicExpectedDamage(context, 0, damagePercent, multiplier);
         if (targetExpectedDamage <= currentExpectedDamage) {
             return 0;
         }
 
         double low = 0;
         double high = 1;
-        while (calcMagicExpectedDamage(context, high, damagePercent) < targetExpectedDamage && high < 1_000_000) {
+        while (calcMagicExpectedDamage(context, high, damagePercent, multiplier) < targetExpectedDamage && high < 1_000_000) {
             high *= 2;
         }
 
         for (int i = 0; i < 60; i++) {
             double mid = (low + high) / 2.0;
-            if (calcMagicExpectedDamage(context, mid, damagePercent) < targetExpectedDamage) {
+            if (calcMagicExpectedDamage(context, mid, damagePercent, multiplier) < targetExpectedDamage) {
                 low = mid;
             } else {
                 high = mid;
@@ -332,6 +353,13 @@ public class DamageCalcService {
         }
 
         return high * context.mainStatMultiplier();
+    }
+
+    private double critMultiplier(int critRate, int critDmgPP, int skillCoeff) {
+        if (critRate <= 0 || critDmgPP <= 0 || skillCoeff <= 0) {
+            return 1.0;
+        }
+        return 1 + (clamp(critRate, 0, 100) / 100.0) * (critDmgPP / (double) skillCoeff);
     }
 
     private double applyMapleWarrior(int baseStat, int mapleWarriorPercent) {
@@ -434,8 +462,8 @@ public class DamageCalcService {
                     req.getMapleWarriorLevel(),
                     req.getMeditationLevel(),
                     req.getRageLevel(),
-                    0,
-                    false,
+                    req.getSharpEyesLevel(),
+                    req.isDecentSharpEyes(),
                     req.isBabyDragonFood(),
                     req.isHontaleVictory()
             );

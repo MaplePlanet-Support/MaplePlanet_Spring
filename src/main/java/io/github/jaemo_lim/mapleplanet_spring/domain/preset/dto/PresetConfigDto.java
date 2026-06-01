@@ -37,6 +37,9 @@ public class PresetConfigDto {
     private boolean decentSharpEyes;
     private boolean babyDragonFood;
     private boolean hontaleVictory;
+    private boolean strDaggerEnabled;
+    private int daggerStrStat;
+    private int daggerStrRequirement;
     private int ammoAtk;
     @Size(max = 30)
     private String ammoName;
