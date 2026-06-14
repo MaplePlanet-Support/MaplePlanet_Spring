@@ -247,7 +247,7 @@ public class DamageCalcService {
             critRate1ToMainStat = findMagicFinalMainStatEquivalent(magicContext, critRateTarget, 0, critMultiplier);
         } else {
             totalAttack = calcPhysicalTotalAttack(req.getWeaponAtk(), totalEquipAtk, buff.attack(), req.getAmmoAtk(), totalAtkPercent);
-            atkPct1 = req.getWeaponAtk() / 100.0;
+            atkPct1 = (req.getWeaponAtk() + totalEquipAtk) / 100.0;
             double damageStat = currentMainStat + finalSubStat / req.getWeaponType().getConstant();
             flatAtk1ToMainStat = totalAttack == 0 ? 0 : damageStat / totalAttack;
             atkPct1ToMainStat = atkPct1 * flatAtk1ToMainStat;
@@ -285,7 +285,7 @@ public class DamageCalcService {
     }
 
     private int calcPhysicalTotalAttack(int weaponAtk, int equipAtk, int buffAtk, int ammoAtk, int attackPercent) {
-        return calcTotalAttackValue(weaponAtk, attackPercent) + equipAtk + buffAtk + ammoAtk;
+        return calcTotalAttackValue(weaponAtk + equipAtk, attackPercent) + buffAtk + ammoAtk;
     }
 
     private double calcPhysicalDamage(double mainStat, double subStat, double weaponConst, int totalAtk) {
